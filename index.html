@@ -778,26 +778,30 @@ function renderView(id){
     html+=sec('Colour variants','',`<div class="chip-wrap">${d.colours.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div>`);
   }
 
-  // Production data
-  const hasProd=md||pr._dpIdx!==undefined;
-  if(hasProd){
-    const mData=md||{};
-    const colours=(pr.colours&&pr.colours.length)?pr.colours:mData.colours||[];
-    const machines=(pr.machines&&pr.machines.length)?pr.machines:mData.machines||[];
-    html+=sec('Production data','ok',`
-      <div class="prod-grid">
-        ${cell('Mould name',pr.mouldName||mData.mc||mData.n)}
-        ${cell('Cycle time',(!empty(pr.cycleTime)?pr.cycleTime:mData.ct)+'s')}
-        ${cell('Pieces / cycle',!empty(pr.piecesCycle)?pr.piecesCycle:mData.pc)}
-        ${cell('Machines',machines.length?(pr.machines||machines).join(', '):'—')}
-      </div>
-      <div class="sec-hdr" style="margin-top:.8rem">Material mix</div>
-      ${renderMaterialRatios(mData.mat,pr.materialRatios)}
-      ${colours.length?`<div class="sec-hdr" style="margin-top:.8rem">Mould colours</div><div class="chip-wrap">${colours.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div>`:''}
-      ${pr._dpIdx!==undefined?`<div style="font-size:.7rem;color:var(--blue);margin-top:.5rem">🔗 Linked to DataProducts row: ${MOULDS[pr._dpIdx]?.n||pr._dpIdx}</div>`:''}
-    `);
+  // Production data — BOM rows
+  const bom=pr.bom||[];
+  if(bom.length){
+    const bomHtml=bom.map((row,i)=>{
+      const mData=row._dpIdx!==undefined?MOULDS[row._dpIdx]||{}:{};
+      const colours=row.colours||(mData.colours)||[];
+      const machines=row.machines||(mData.machines)||[];
+      const ratios=row.materialRatios||(mData.mat?[{name:mData.mat,qty:'1'}]:[]);
+      const total=ratios.reduce((a,r)=>a+(parseFloat(r.qty)||0),0);
+      return`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem .8rem;margin-bottom:.6rem">
+        <div style="font-size:.7rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.06em">Component ${i+1}${row._dpIdx!==undefined?` — <span style="color:var(--blue)">${esc(MOULDS[row._dpIdx]?.n||'')}</span>`:''}</div>
+        <div class="prod-grid">
+          ${cell('Mould name',row.mouldName||mData.mc||mData.n||'—')}
+          ${cell('Cycle time',(row.cycleTime||mData.ct||'—')+'s')}
+          ${cell('Pieces / cycle',row.piecesCycle||mData.pc||'—')}
+          ${cell('Machines',machines.length?machines.join(', '):'—')}
+        </div>
+        ${ratios.length?`<div style="margin-top:.5rem"><div class="prod-lbl" style="margin-bottom:.3rem">Material mix</div>${renderMaterialRatios(mData.mat,row.materialRatios)}</div>`:''}
+        ${colours.length?`<div style="margin-top:.4rem"><div class="prod-lbl">Colours</div><div class="chip-wrap" style="margin-top:.25rem">${colours.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div></div>`:''}
+      </div>`;
+    }).join('');
+    html+=sec('Bill of materials (BOM)','ok',bomHtml);
   } else {
-    html+=sec('Production data','miss','<p class="no-data">Not linked to DataProducts. Use Edit mode to link or enter manually.</p>');
+    html+=sec('Bill of materials (BOM)','miss','<p class="no-data">No BOM components entered. Use Edit mode to add mould components.</p>');
   }
 
   // Packaging
@@ -846,18 +850,6 @@ function renderEdit(id){
 
   let html=`<div style="margin-bottom:1rem;padding:.55rem .75rem;background:var(--amberbg);border:1px solid var(--amber);border-radius:8px;font-size:.76rem;color:var(--amber)">✏ <strong>Edit mode</strong> — Changes saved to cloud on save.</div>`;
 
-  // DataProducts linker
-  html+=`<div class="sec"><div class="sec-hdr">DataProducts link</div>
-    <div class="dp-link-box">
-      <div class="dp-link-label">Linked row ${pr._dpIdx!==undefined?'<span style="color:var(--green)">✓ linked</span>':'<span style="color:var(--muted)">not linked</span>'}</div>
-      ${pr._dpIdx!==undefined?`<div class="dp-link-val">${esc(MOULDS[pr._dpIdx]?.n||'')} <button class="del-btn" onclick="unlinkDP()" style="font-size:.65rem;padding:.18rem .4rem">✕ Unlink</button></div>`:''}
-      <div class="dp-search-wrap">
-        <input class="dp-search-input" id="dp-search" placeholder="Search DataProducts by Arabic name, mould code, group…" oninput="searchDP(this.value)" autocomplete="off">
-        <div class="dp-dropdown" id="dp-dropdown" style="display:none"></div>
-      </div>
-    </div>
-  </div>`;
-
   html+=`<div class="sec"><div class="sec-hdr">General</div>
     <div class="ef"><label class="el">Notes</label><textarea class="et" id="e_notes" rows="2">${esc(pr.notes||'')}</textarea></div>
   </div>`;
@@ -870,27 +862,14 @@ function renderEdit(id){
     <div class="ef"><label class="el">Dimensions (L×W×H cm)</label><input class="ei" id="e_dims" value="${esc(pr.dimensions||'')}"></div>
   </div>`;
 
-  // Production data
-  html+=`<div class="sec"><div class="sec-hdr">Production data</div>
-    <div class="eg2" style="margin-bottom:.5rem">
-      <div class="ef"><label class="el">Mould name / code</label><input class="ei" id="e_mould" value="${esc(pr.mouldName||mData.mc||mData.n||'')}"></div>
-      <div class="ef"><label class="el">Cycle time (seconds)</label><input class="ei" id="e_ct" value="${esc(!empty(pr.cycleTime)?pr.cycleTime:mData.ct||'')}"></div>
+  // BOM rows
+  const bomRows = pr.bom && pr.bom.length ? pr.bom : [{}];
+  html+=`<div class="sec">
+    <div class="sec-hdr" style="justify-content:space-between">
+      Bill of materials (BOM)
+      <button class="add-row-btn" onclick="addBomRow()" style="width:auto;margin:0;padding:.2rem .6rem;font-size:.68rem">+ Add component</button>
     </div>
-    <div class="eg2" style="margin-bottom:.5rem">
-      <div class="ef"><label class="el">Pieces / cycle (cavities)</label><input class="ei" id="e_pc" value="${esc(!empty(pr.piecesCycle)?pr.piecesCycle:mData.pc||'')}"></div>
-      <div class="ef"><label class="el">Machine availability (tons)</label><input class="ei" id="e_machines" value="${esc(machines.join(', '))}"></div>
-    </div>
-    <div class="ef"><label class="el">Mould colours (comma separated)</label><input class="ei" id="e_colours" value="${esc(colours.join(', '))}"></div>
-  </div>`;
-
-  // Material ratios
-  html+=`<div class="sec"><div class="sec-hdr">Material mix (ratios)</div>
-    <div style="display:grid;grid-template-columns:1fr 80px 70px 28px;gap:.3rem;font-size:.68rem;color:var(--muted);padding:0 .1rem .25rem"><span>Material name</span><span>Ratio</span><span>% (auto)</span><span></span></div>
-    <div id="ratio-rows">
-    ${ratios.map((r,i)=>ratioRowHtml(r,i)).join('')}
-    </div>
-    <button class="add-row-btn" onclick="addRatioRow()">+ Add material</button>
-    <div id="ratio-preview" style="margin-top:.5rem"></div>
+    <div id="bom-rows">${bomRows.map((row,i)=>bomRowHtml(row,i)).join('')}</div>
   </div>`;
 
   // BOM/Packaging/Quality/Steps/Revisions same as before
@@ -963,31 +942,143 @@ function getRatioRows(){
   const rows=[];document.querySelectorAll('[id^="rr-"]').forEach((el,i)=>{const ins=el.querySelectorAll('input');if(ins.length>=2)rows.push({name:ins[0].value,qty:ins[1].value,color:COLORS[i%COLORS.length]});});return rows;
 }
 
-// DataProducts search
-function searchDP(q){
-  const dd=document.getElementById('dp-dropdown');
+// ── BOM ROW helpers ──────────────────────────────────────────────────
+function bomRowHtml(row, i){
+  const mData = row._dpIdx!==undefined ? MOULDS[row._dpIdx]||{} : {};
+  const COLORS=['#4a90d9','#e2a83a','#5cb85c','#d9534f','#9b59b6','#1abc9c'];
+  const ratios = row.materialRatios || (mData.mat?[{name:mData.mat,qty:'1',color:COLORS[0]}]:[{name:'',qty:'1',color:COLORS[0]}]);
+  const machines = (row.machines||mData.machines||[]).join(', ');
+  const colours = (row.colours||mData.colours||[]).join(', ');
+  return `<div class="bom-component" id="bom-${i}" data-dpidx="${row._dpIdx!==undefined?row._dpIdx:''}" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.75rem .8rem;margin-bottom:.65rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+      <span style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Component ${i+1}</span>
+      <button class="del-btn" onclick="delBomRow(${i})">✕ Remove</button>
+    </div>
+    <div class="dp-link-box" style="margin-bottom:.6rem">
+      <div class="dp-link-label">DataProducts link ${row._dpIdx!==undefined?'<span style="color:var(--green)">✓ linked</span>':'<span style="color:var(--muted)">not linked</span>'}</div>
+      ${row._dpIdx!==undefined?`<div class="dp-link-val">${esc(MOULDS[row._dpIdx]?.n||'')} <button class="del-btn" onclick="unlinkBomRow(${i})" style="font-size:.65rem;padding:.15rem .35rem">✕ Unlink</button></div>`:''}
+      <div class="dp-search-wrap">
+        <input class="dp-search-input" id="dp-search-${i}" placeholder="Search DataProducts by name, mould code…" oninput="searchDPRow(this.value,${i})" autocomplete="off">
+        <div class="dp-dropdown" id="dp-dd-${i}" style="display:none"></div>
+      </div>
+    </div>
+    <div class="eg2" style="margin-bottom:.45rem">
+      <div class="ef"><label class="el">Mould name / code</label><input class="ei" id="bom-mould-${i}" value="${esc(row.mouldName||mData.mc||mData.n||'')}"></div>
+      <div class="ef"><label class="el">Cycle time (s)</label><input class="ei" id="bom-ct-${i}" value="${esc(row.cycleTime||mData.ct||'')}"></div>
+    </div>
+    <div class="eg2" style="margin-bottom:.45rem">
+      <div class="ef"><label class="el">Pieces / cycle</label><input class="ei" id="bom-pc-${i}" value="${esc(row.piecesCycle||mData.pc||'')}"></div>
+      <div class="ef"><label class="el">Machine availability</label><input class="ei" id="bom-machines-${i}" value="${esc(machines)}"></div>
+    </div>
+    <div class="ef" style="margin-bottom:.45rem"><label class="el">Colours (comma separated)</label><input class="ei" id="bom-colours-${i}" value="${esc(colours)}"></div>
+    <div class="ef"><label class="el">Material mix (ratios)</label>
+      <div style="display:grid;grid-template-columns:1fr 70px 60px 28px;gap:.3rem;font-size:.65rem;color:var(--muted);margin-bottom:.2rem"><span>Material name</span><span>Ratio</span><span>%</span><span></span></div>
+      <div id="bom-ratios-${i}">${ratios.map((r,ri)=>ratioInBomHtml(r,i,ri)).join('')}</div>
+      <button class="add-row-btn" onclick="addBomRatioRow(${i})" style="margin-top:.25rem">+ Add material</button>
+      <div id="bom-ratio-bar-${i}" style="margin-top:.4rem"></div>
+    </div>
+  </div>`;
+}
+
+function ratioInBomHtml(r,bomIdx,ri){
+  const COLORS=['#4a90d9','#e2a83a','#5cb85c','#d9534f','#9b59b6','#1abc9c'];
+  return `<div style="display:grid;grid-template-columns:1fr 70px 60px 28px;gap:.3rem;margin-bottom:.3rem" id="bom-ratio-${bomIdx}-${ri}">
+    <input class="ei" value="${esc(r.name)}" placeholder="e.g. Copolymer M44" oninput="updateBomRatioBar(${bomIdx})">
+    <input class="ei" value="${esc(r.qty)}" placeholder="3" oninput="updateBomRatioBar(${bomIdx})" style="font-family:monospace">
+    <span id="bom-rpct-${bomIdx}-${ri}" style="font-size:.72rem;color:var(--muted);padding:.38rem .1rem;font-family:monospace"></span>
+    <button class="del-btn" onclick="delBomRatioRow(${bomIdx},${ri})">✕</button>
+  </div>`;
+}
+
+function addBomRow(){
+  const c=document.getElementById('bom-rows');
+  const i=c.querySelectorAll('.bom-component').length;
+  const d=document.createElement('div');
+  d.innerHTML=bomRowHtml({},i);
+  c.appendChild(d.firstElementChild);
+}
+function delBomRow(i){const el=document.getElementById('bom-'+i);if(el)el.remove();}
+
+function addBomRatioRow(bomIdx){
+  const c=document.getElementById('bom-ratios-'+bomIdx);
+  const ri=c.children.length;
+  const d=document.createElement('div');
+  d.innerHTML=ratioInBomHtml({name:'',qty:'1'},bomIdx,ri);
+  c.appendChild(d.firstElementChild);
+  updateBomRatioBar(bomIdx);
+}
+function delBomRatioRow(bomIdx,ri){const el=document.getElementById('bom-ratio-'+bomIdx+'-'+ri);if(el)el.remove();updateBomRatioBar(bomIdx);}
+
+function updateBomRatioBar(bomIdx){
+  const COLORS=['#4a90d9','#e2a83a','#5cb85c','#d9534f','#9b59b6','#1abc9c'];
+  const rows=[...document.querySelectorAll('[id^="bom-ratio-'+bomIdx+'-"]')];
+  const data=rows.map((el,ri)=>{const ins=el.querySelectorAll('input');return{name:ins[0]?.value,qty:parseFloat(ins[1]?.value)||0};});
+  const total=data.reduce((a,r)=>a+r.qty,0);
+  data.forEach((r,ri)=>{const pct=total?Math.round(r.qty/total*100):0;const el=document.getElementById('bom-rpct-'+bomIdx+'-'+ri);if(el)el.textContent=pct+'%';});
+  const bars=data.map((r,ri)=>`<div style="flex:${r.qty||1};background:${COLORS[ri%COLORS.length]}" title="${r.name||'?'}"></div>`).join('');
+  const bar=document.getElementById('bom-ratio-bar-'+bomIdx);
+  if(bar)bar.innerHTML=data.length?`<div class="ratio-bar">${bars}</div>`:'';
+}
+
+function searchDPRow(q, bomIdx){
+  const dd=document.getElementById('dp-dd-'+bomIdx);
   if(!q||q.length<1){dd.style.display='none';return;}
   const ql=q.toLowerCase();
   const matches=MOULDS.map((m,i)=>({m,i})).filter(({m})=>(m.n&&m.n.includes(q))||(m.mc&&m.mc.toLowerCase().includes(ql))||(m.g&&m.g.toLowerCase().includes(ql))).slice(0,20);
   if(!matches.length){dd.style.display='none';return;}
-  dd.innerHTML=matches.map(({m,i})=>`<div class="dp-opt" onclick="selectDP(${i})"><span class="dp-opt-name">${esc(m.n)}</span><span class="dp-opt-meta">${esc(m.mc)} · ${esc(m.g)} · ct:${m.ct}s pc:${m.pc}</span></div>`).join('');
+  dd.innerHTML=matches.map(({m,i})=>`<div class="dp-opt" onclick="selectDPRow(${i},${bomIdx})"><span class="dp-opt-name">${esc(m.n)}</span><span class="dp-opt-meta">${esc(m.mc)} · ${esc(m.g)} · ct:${m.ct}s pc:${m.pc}</span></div>`).join('');
   dd.style.display='block';
 }
-function selectDP(idx){
-  const pr=getProfile(currentPid);pr._dpIdx=idx;saveProfile(currentPid,pr);
-  document.getElementById('dp-search').value='';document.getElementById('dp-dropdown').style.display='none';
-  // Re-render edit with new linked data
-  renderEdit(currentPid);
-  showToast('Linked to: '+MOULDS[idx].n);
+function selectDPRow(dpIdx, bomIdx){
+  // Save link and re-render just this BOM row
+  const m=MOULDS[dpIdx];
+  document.getElementById('dp-search-'+bomIdx).value='';
+  document.getElementById('dp-dd-'+bomIdx).style.display='none';
+  // Update the bom component in place by replacing it
+  const el=document.getElementById('bom-'+bomIdx);
+  if(!el)return;
+  const newRow={_dpIdx:dpIdx,mouldName:m.mc||m.n,cycleTime:m.ct,piecesCycle:m.pc,machines:m.machines||[],colours:m.colours||[],materialRatios:m.mat?[{name:m.mat,qty:'1'}]:[]};
+  const d=document.createElement('div');
+  d.innerHTML=bomRowHtml(newRow,bomIdx);
+  const newEl=d.firstElementChild;
+  newEl.setAttribute('data-dpidx',String(dpIdx));
+  el.replaceWith(newEl);
+  showToast('Linked: '+m.n);
 }
-function unlinkDP(){const pr=getProfile(currentPid);delete pr._dpIdx;saveProfile(currentPid,pr);renderEdit(currentPid);}
+function unlinkBomRow(bomIdx){
+  const el=document.getElementById('bom-'+bomIdx);
+  if(!el)return;
+  const d=document.createElement('div');
+  d.innerHTML=bomRowHtml({},bomIdx);
+  el.replaceWith(d.firstElementChild);
+}
+
+function readBomRows(){
+  const COLORS=['#4a90d9','#e2a83a','#5cb85c','#d9534f','#9b59b6','#1abc9c'];
+  const rows=[];
+  document.querySelectorAll('.bom-component').forEach((el,i)=>{
+    const ratioEls=[...el.querySelectorAll('[id^="bom-ratio-'+i+'-"]')];
+    const ratios=ratioEls.map((rel,ri)=>{const ins=rel.querySelectorAll('input');return{name:ins[0]?.value||'',qty:ins[1]?.value||'1',color:COLORS[ri%COLORS.length]};}).filter(r=>r.name);
+    // Read _dpIdx from data attribute
+    const dpIdxStr=el.getAttribute('data-dpidx');
+    const dpIdx=dpIdxStr!==''&&dpIdxStr!==null?parseInt(dpIdxStr):undefined;
+    rows.push({
+      _dpIdx:dpIdx,
+      mouldName:document.getElementById('bom-mould-'+i)?.value||'',
+      cycleTime:document.getElementById('bom-ct-'+i)?.value||'',
+      piecesCycle:document.getElementById('bom-pc-'+i)?.value||'',
+      machines:(document.getElementById('bom-machines-'+i)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+      colours:(document.getElementById('bom-colours-'+i)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+      materialRatios:ratios,
+    });
+  });
+  return rows;
+}
 
 function saveEdit(){
-  const ratios=getRatioRows();
+  const bom=readBomRows();
   const steps=[...document.querySelectorAll('[id^="sr-"]')].map(el=>el.querySelector('input')?.value||'').filter(Boolean);
   const revs=[...document.querySelectorAll('[id^="rvr-"]')].map(el=>{const ins=el.querySelectorAll('input');return{rev:ins[0]?.value,date:ins[1]?.value,desc:ins[2]?.value,by:ins[3]?.value};}).filter(r=>r.rev||r.desc);
-  const machinesRaw=document.getElementById('e_machines')?.value||'';
-  const coloursRaw=document.getElementById('e_colours')?.value||'';
   const pr=getProfile(currentPid);
   const data={
     ...pr,
@@ -995,12 +1086,7 @@ function saveEdit(){
     weight:document.getElementById('e_weight')?.value||'',
     dimensions:document.getElementById('e_dims')?.value||'',
     volume:document.getElementById('e_volume')?.value||'',
-    mouldName:document.getElementById('e_mould')?.value||'',
-    cycleTime:document.getElementById('e_ct')?.value||'',
-    piecesCycle:document.getElementById('e_pc')?.value||'',
-    machines:machinesRaw.split(',').map(s=>s.trim()).filter(Boolean),
-    colours:coloursRaw.split(',').map(s=>s.trim()).filter(Boolean),
-    materialRatios:ratios,
+    bom,
     packaging:{inner:document.getElementById('e_pkg_inner')?.value||'',carton:document.getElementById('e_pkg_carton')?.value||'',pallet:document.getElementById('e_pkg_pallet')?.value||'',unitsPerPallet:document.getElementById('e_pkg_units')?.value||''},
     quality:{dimTol:document.getElementById('e_q_dim')?.value||'',visual:document.getElementById('e_q_vis')?.value||'',functional:document.getElementById('e_q_func')?.value||''},
     assemblySteps:steps,revisions:revs,
