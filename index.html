@@ -402,33 +402,65 @@ const DEFAULT_USERS=[{username:'yousef',hash:'',role:'admin'}]; // hash set on f
 let SESSION=null; // {username, role}
 
 async function initAuth(){
-  // Build default user hash if missing from store
-  const store=getStore();
-  if(!store._users){
-    const h=await sha256('6666');
-    store._users=[{username:'yousef',hash:h,role:'admin'}];
-    saveStore(store);
-  }
-  // Restore session from sessionStorage
+  // Restore session from sessionStorage first
   const s=sessionStorage.getItem('awp_session');
-  if(s){
-    try{SESSION=JSON.parse(s);}catch{}
-  }
-  if(SESSION){
-    showApp();
+  if(s){try{SESSION=JSON.parse(s);}catch{}}
+  if(SESSION){showApp();return;}
+  // Pre-load cloud store so users list is ready at login
+  setSyncStatus('loading','Loading…');
+  if(IS_NETLIFY){
+    try{
+      const r=await fetch(API_URL);
+      if(r.ok){
+        const data=await r.json();
+        _store=Object.assign({},getLocalStore(),data||{});
+        setLocalStore(_store);_storeLoaded=true;
+        setSyncStatus('ok','Ready');
+        if(!_store._users){
+          const h=await sha256('6666');
+          _store._users=[{username:'yousef',hash:h,role:'admin'}];
+          saveStore(_store);
+        }
+      }
+    }catch(e){
+      _storeLoaded=true;_store=getLocalStore();
+      setSyncStatus('error','Offline – local only');
+    }
+  } else {
+    _storeLoaded=true;_store=getLocalStore();
+    if(!_store._users){
+      const h=await sha256('6666');
+      _store._users=[{username:'yousef',hash:h,role:'admin'}];
+      saveStore(_store);
+    }
+    setSyncStatus('offline','Local only');
   }
 }
 
 async function doLogin(){
   const u=document.getElementById('lu').value.trim().toLowerCase();
   const p=document.getElementById('lp').value;
-  if(!u||!p){document.getElementById('login-err').textContent='Please enter username and password.';return;}
+  const errEl=document.getElementById('login-err');
+  if(!u||!p){errEl.textContent='Please enter username and password.';return;}
+  const btn=document.querySelector('.login-btn');
+  btn.textContent='Signing in…';btn.disabled=true;
+  // If cloud not loaded yet (slow connection) wait for it
+  if(IS_NETLIFY&&!_storeLoaded){
+    try{
+      const r=await fetch(API_URL);
+      if(r.ok){
+        const data=await r.json();
+        _store=Object.assign({},getLocalStore(),data||{});
+        setLocalStore(_store);_storeLoaded=true;
+      }
+    }catch(e){_storeLoaded=true;_store=getLocalStore();}
+  }
   const h=await sha256(p);
-  const store=getStore();
-  const users=store._users||[];
+  const users=(getStore()._users)||[];
   const user=users.find(x=>x.username.toLowerCase()===u&&x.hash===h);
+  btn.textContent='Sign in';btn.disabled=false;
   if(!user){
-    document.getElementById('login-err').textContent='Invalid credentials.';
+    errEl.textContent='Invalid credentials.';
     document.getElementById('lp').value='';
     return;
   }
