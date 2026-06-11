@@ -394,7 +394,6 @@ const CAT_ICONS  = {"Basins":"🪣","Kitchen":"🍳","Tables & Chairs":"🪑","S
 const CAT_COLORS = {"Basins":"#2563eb","Kitchen":"#d97706","Tables & Chairs":"#7c3aed","Storage":"#059669","Bathroom":"#0891b2","Sets":"#dc2626","Kids":"#db2777","Bins & Dustbins":"#65a30d","Organizers":"#9333ea"};
 const SUBS_BY_CAT = {"Basins": ["Basins", "Basins - Magour"], "Kitchen": ["Bowls", "Bread/Fruit Plates", "Colanders", "Dish Holders", "Flasks", "Food Containers", "Lunch Boxes", "Organizers", "Trays"], "Tables & Chairs": ["Chairs", "Chaise Longues", "Entree", "Tables"], "Storage": ["Comodinos", "Cupboards", "Footwear", "Shannons", "Stands", "Trolly", "Turbos"], "Bathroom": ["Bags", "Bathroom Stands", "Buckets", "Laundry Baskets"], "Sets": ["Sets"], "Kids": ["Bottles", "Kids General", "Potties", "Small Chairs"], "Bins & Dustbins": ["Baskets", "Bins", "Dustbins"], "Organizers": ["Clamp Baskets", "General", "Hangers", "Mobile Holders", "Tissue Holders"]};
 
-
 // ══ AUTH ══════════════════════════════════════════════════════════════
 // SHA-256 helper
 async function sha256(msg){
@@ -543,6 +542,68 @@ function getStore(){if(_storeLoaded&&_store!==null)return _store;return getLocal
 function saveStore(s){_store=s;setLocalStore(s);pushCloud(s);}
 function getProfile(id){return(getStore()[id])||{};}
 function saveProfile(id,data){const s=getStore();s[id]=data;saveStore(s);}
+// Editable-identity overrides: reflect a saved custom English name onto the product object
+// so the grid, search, hero and view all show it consistently.
+function applyOverrides(){
+  const s=getStore();
+  allProducts.forEach(p=>{
+    const pr=s[p.id];
+    if(pr&&pr._enName){ if(p._origEn===undefined)p._origEn=p.en; p.en=pr._enName; }
+    else if(p._origEn!==undefined){ p.en=p._origEn; }
+    if(pr&&pr._catOverride){ if(p._origCat===undefined)p._origCat=p.cat; p.cat=pr._catOverride; }
+    else if(p._origCat!==undefined){ p.cat=p._origCat; }
+    if(pr&&pr._subOverride){ if(p._origSub===undefined)p._origSub=p.sub; p.sub=pr._subOverride; }
+    else if(p._origSub!==undefined){ p.sub=p._origSub; }
+  });
+}
+
+// Subcategory dropdown repopulation when category changes
+function updateSubcats(){
+  const cat=document.getElementById('e_category')?.value;
+  const sel=document.getElementById('e_subcategory');
+  if(!sel)return;
+  sel.innerHTML=(SUBS_BY_CAT[cat]||[]).map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+}
+
+// Image upload: read file, resize to ~500px, store as base64 in a hidden field
+function handleImgUpload(input){
+  const f=input.files&&input.files[0];
+  if(!f)return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=500;let w=img.width,h=img.height;
+      if(w>h){if(w>max){h=Math.round(h*max/w);w=max;}}else{if(h>max){w=Math.round(w*max/h);h=max;}}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      let data;try{data=c.toDataURL('image/jpeg',0.82);}catch(e){data=ev.target.result;}
+      const hid=document.getElementById('e_image_data');if(hid)hid.value=data;
+      const pv=document.getElementById('e_img_prev');if(pv)pv.innerHTML='<img src="'+data+'" style="width:100%;height:100%;object-fit:contain">';
+      unsaved=true;
+    };
+    img.src=ev.target.result;
+  };
+  rd.readAsDataURL(f);
+}
+function clearProdImg(){
+  const hid=document.getElementById('e_image_data');if(hid)hid.value='';
+  const pv=document.getElementById('e_img_prev');if(pv)pv.innerHTML='<span style="font-size:1.6rem">🖼️</span>';
+  unsaved=true;
+}
+
+// Batched field-level change logging (one store write)
+function logChanges(name,list){
+  if(!list||!list.length)return;
+  const s=getStore();
+  if(!s._log)s._log=[];
+  const t=new Date().toLocaleString('en-GB');
+  list.forEach(c=>{
+    s._log.unshift({user:SESSION.username,action:'changed '+c.field,target:name+': "'+c.from+'" → "'+c.to+'"',time:t});
+  });
+  if(s._log.length>500)s._log=s._log.slice(0,500);
+  saveStore(s);
+}
 
 // ══ MATCHING ENGINE ════════════════════════════════════════════════════
 const EN_AR_MAP=[
@@ -602,7 +663,7 @@ function findMould(p){
 }
 
 // ══ IMAGE ═════════════════════════════════════════════════════════════
-function imgUrl(pid,size){const iid=IMG_MAP[String(pid)];return iid?IMG_BASE+iid+'_'+size+'_'+size+'.jpg':null;}
+function imgUrl(pid,size){const ov=getProfile(pid)._image;if(ov)return ov;const iid=IMG_MAP[String(pid)];return iid?IMG_BASE+iid+'_'+size+'_'+size+'.jpg':null;}
 function cardThumb(p){
   const url=imgUrl(p.id,270);const ic=CAT_ICONS[p.cat]||'📦';const cc=CAT_COLORS[p.cat]||'#888';
   if(url)return`<div class="card-thumb" style="background:${cc}15;padding:0;overflow:hidden"><img src="${url}" alt="" style="width:100%;height:100%;object-fit:contain;padding:4px" onerror="this.style.display='none';this.parentElement.style.fontSize='2.2rem';this.parentElement.style.display='flex';this.parentElement.style.alignItems='center';this.parentElement.style.justifyContent='center';this.parentElement.textContent='${ic}'"></div>`;
@@ -623,14 +684,14 @@ function getTrashedProducts(){return allProducts.filter(p=>getProfile(p.id)._tra
 
 // ══ INIT ═══════════════════════════════════════════════════════════════
 function init(){
-  buildCatList();updateCounts();renderGrid();
+  applyOverrides();buildCatList();updateCounts();renderGrid();
   loadCloud().then(()=>{
     // Re-load custom products from store
     const s=getStore();
     if(s._customProducts){
       s._customProducts.forEach(cp=>{if(!allProducts.find(p=>p.id===cp.id))allProducts.push(cp);});
     }
-    updateCounts();renderGrid();
+    applyOverrides();updateCounts();renderGrid();
   });
 }
 function buildCatList(){
@@ -787,10 +848,15 @@ function renderView(id){
   let html=panelHero(p);
 
   // Identification
+  const _arName=pr._arName||ar;
+  const _code=pr._codeOverride||(d&&(d.codes||[])[0])||'';
+  const _barcode=pr._barcodeOverride||(d&&(d.bc||[])[0])||'';
   html+=sec('Identification','',`<table class="itbl">
-    <tr><td>English name</td><td class="iv">${esc(p.en)}</td></tr>
-    ${ar?`<tr><td>Arabic name</td><td class="iv rtl">${esc(ar)}</td></tr>`:''}
+    <tr><td>English name</td><td class="iv">${esc(pr._enName||p.en)}</td></tr>
+    ${_arName?`<tr><td>Arabic name</td><td class="iv rtl">${esc(_arName)}</td></tr>`:''}
     <tr><td>Category</td><td class="iv">${esc(p.cat)} › ${esc(p.sub)}</td></tr>
+    ${_code?`<tr><td>Internal code</td><td class="iv mono">${esc(_code)}</td></tr>`:''}
+    ${_barcode?`<tr><td>Barcode</td><td class="iv mono">${esc(_barcode)}</td></tr>`:''}
     <tr><td>Website ID</td><td class="iv mono">#${id}</td></tr>
     ${pr.notes?`<tr><td>Notes</td><td class="iv">${esc(pr.notes)}</td></tr>`:''}
     ${pr._lastEditBy?`<tr><td>Last edited by</td><td class="iv"><span style="color:var(--purple);font-weight:600">${esc(pr._lastEditBy)}</span> · <span style="color:var(--muted);font-size:.75rem">${esc(pr._lastEditAt||'')}</span></td></tr>`:''}
@@ -876,24 +942,16 @@ function renderView(id){
 }
 
 // ══ EDIT MODE ═════════════════════════════════════════════════════════
-function updateSubcategories(){
-  const cat = document.getElementById('e_category').value;
-  const subSelect = document.getElementById('e_subcategory');
-  const subs = SUBS_BY_CAT[cat]||[];
-  subSelect.innerHTML = subs.map(s=>`<option value="${s}">${s}</option>`).join('');
-}
-
-function updateSubcategories(){
-  const cat=document.getElementById('e_category')?.value;
-  const subSel=document.getElementById('e_subcategory');
-  if(!cat||!subSel)return;
-  const subs=SUBS_BY_CAT[cat]||[];
-  subSel.innerHTML=subs.map(s=>`<option value="${s}">${s}</option>`).join('');
-}
 function renderEdit(id){
   const p=allProducts.find(x=>x.id===id);
+  const[ar,d]=findBC(p);
   const[,md]=findMould(p);
   const pr=getProfile(id);
+  const curCode=pr._codeOverride||(d&&(d.codes||[])[0])||'';
+  const curBarcode=pr._barcodeOverride||(d&&(d.bc||[])[0])||'';
+  const curCat=pr._catOverride||p.cat||'';
+  const curSub=pr._subOverride||p.sub||'';
+  const curImg=pr._image||'';
   const mData=md||{};
   const pkg=pr.packaging||{};const q=pr.quality||{};
   const steps=pr.assemblySteps||[''];
@@ -904,31 +962,30 @@ function renderEdit(id){
 
   let html=`<div style="margin-bottom:1rem;padding:.55rem .75rem;background:var(--amberbg);border:1px solid var(--amber);border-radius:8px;font-size:.76rem;color:var(--amber)">✏ <strong>Edit mode</strong> — Changes saved to cloud on save.</div>`;
 
-  html+=`<div class="sec"><div class="sec-hdr">Product Identity (Admin editable)</div>
+  html+=`<div class="sec"><div class="sec-hdr">Product identity</div>
     <div class="eg2">
       <div class="ef"><label class="el">English name</label><input class="ei" id="e_en_name" value="${esc(p.en||'')}"></div>
-      <div class="ef"><label class="el">Arabic name</label><input class="ei" id="e_ar_name" value="${esc(ar||'')}"></div>
+      <div class="ef"><label class="el">Arabic name</label><input class="ei rtl" id="e_ar_name" value="${esc(pr._arName||ar||'')}"></div>
     </div>
     <div class="eg2">
-      <div class="ef"><label class="el">Internal code</label><input class="ei" id="e_code" value="${esc(code||'')}"></div>
-      <div class="ef"><label class="el">Barcode</label><input class="ei" id="e_barcode" value="${esc(barcode||'')}"></div>
+      <div class="ef"><label class="el">Internal code</label><input class="ei" id="e_code" value="${esc(curCode)}"></div>
+      <div class="ef"><label class="el">Barcode</label><input class="ei" id="e_barcode" value="${esc(curBarcode)}"></div>
     </div>
     <div class="eg2">
-      <div class="ef"><label class="el">Category</label><select class="ei" id="e_category" onchange="updateSubcategories()">${Object.keys(SUBS_BY_CAT).sort().map(c=>`<option value="${c}" ${p.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="ef"><label class="el">Subcategory</label><select class="ei" id="e_subcategory">${(SUBS_BY_CAT[p.cat]||[]).map(s=>`<option value="${s}" ${p.sub===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="ef"><label class="el">Category</label><select class="ei" id="e_category" onchange="updateSubcats()">${Object.keys(SUBS_BY_CAT).map(c=>'<option value="'+esc(c)+'"'+(c===curCat?' selected':'')+'>'+esc(c)+'</option>').join('')}</select></div>
+      <div class="ef"><label class="el">Subcategory</label><select class="ei" id="e_subcategory">${(SUBS_BY_CAT[curCat]||[]).map(x=>'<option value="'+esc(x)+'"'+(x===curSub?' selected':'')+'>'+esc(x)+'</option>').join('')}</select></div>
     </div>
-  </div>`;
-  
-  html+=`<div class="sec"><div class="sec-hdr">Product Image</div>
-    <div style="margin-bottom:.5rem">
-      <div style="width:100%;height:180px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--surface2);margin-bottom:.5rem;overflow:hidden">
-        <img id="e_image_preview" src="/images/products/${id}.jpg" style="max-width:100%;max-height:100%;object-fit:contain" onerror="this.src='🖼️'">
+    <div class="ef"><label class="el">Product image</label>
+      <input type="hidden" id="e_image_data" value="${curImg}">
+      <div style="display:flex;gap:.6rem;align-items:center">
+        <div id="e_img_prev" style="width:64px;height:64px;border:1px solid var(--border);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface2)">${curImg?`<img src="${curImg}" style="width:100%;height:100%;object-fit:contain">`:'<span style="font-size:1.6rem">🖼️</span>'}</div>
+        <input type="file" accept="image/*" id="e_img_file" onchange="handleImgUpload(this)" style="font-size:.78rem;flex:1">
+        <button type="button" class="del-btn" onclick="clearProdImg()" title="Remove image">✕</button>
       </div>
-      <input type="file" id="e_image_upload" accept="image/jpeg,image/png,image/webp" style="width:100%;padding:.5rem">
-      <small style="color:var(--muted);display:block;margin-top:.25rem">Upload JPG, PNG, or WebP (max 5MB). Replaces website photo.</small>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:.3rem">Auto-resized to ~500px. Overrides the website image on the card and profile.</div>
     </div>
   </div>`;
-  
+
   html+=`<div class="sec"><div class="sec-hdr">General</div>
     <div class="ef"><label class="el">Notes</label><textarea class="et" id="e_notes" rows="2">${esc(pr.notes||'')}</textarea></div>
   </div>`;
@@ -1156,94 +1213,82 @@ function readBomRows(){
   return rows;
 }
 
-function readEditFields(){
-  const p = allProducts.find(x=>x.id===currentPid);
-  const[,md] = findMould(p);
-  return {
-    en_name: document.getElementById('e_en_name')?.value,
-    ar_name: document.getElementById('e_ar_name')?.value,
-    code: document.getElementById('e_code')?.value,
-    barcode: document.getElementById('e_barcode')?.value,
-    category: document.getElementById('e_category')?.value,
-    subcategory: document.getElementById('e_subcategory')?.value,
-    notes: document.getElementById('e_notes')?.value,
-    weight: document.getElementById('e_weight')?.value,
-    volume: document.getElementById('e_volume')?.value,
-    dims: document.getElementById('e_dims')?.value,
-    bom: readBomRows(),
-    pkg_inner: document.getElementById('e_pkg_inner')?.value,
-    pkg_carton: document.getElementById('e_pkg_carton')?.value,
-    pkg_pallet: document.getElementById('e_pkg_pallet')?.value,
-    pkg_units: document.getElementById('e_pkg_units')?.value,
-    q_dim: document.getElementById('e_q_dim')?.value,
-    q_vis: document.getElementById('e_q_vis')?.value,
-    q_func: document.getElementById('e_q_func')?.value,
-    steps: [...document.querySelectorAll('[id^="sr-"]')].map(el=>el.querySelector('input')?.value||''),
-    revisions: readRevisions()
-  };
-}
-
 function saveEdit(){
   const bom=readBomRows();
   const steps=[...document.querySelectorAll('[id^="sr-"]')].map(el=>el.querySelector('input')?.value||'').filter(Boolean);
   const revs=[...document.querySelectorAll('[id^="rvr-"]')].map(el=>{const ins=el.querySelectorAll('input');return{rev:ins[0]?.value,date:ins[1]?.value,desc:ins[2]?.value,by:ins[3]?.value};}).filter(r=>r.rev||r.desc);
   const pr=getProfile(currentPid);
-  const p=allProducts.find(x=>x.id===currentPid);
-  
-  // Capture editable product identity fields
-  const en_name=document.getElementById('e_en_name')?.value||'';
-  const ar_name=document.getElementById('e_ar_name')?.value||'';
-  const code=document.getElementById('e_code')?.value||'';
-  const barcode=document.getElementById('e_barcode')?.value||'';
-  const category=document.getElementById('e_category')?.value||'';
-  const subcategory=document.getElementById('e_subcategory')?.value||'';
-  
-  // Track changes for activity log
-  let changes=[];
-  if(en_name&&en_name!==p.en)changes.push(`en_name: ${p.en}→${en_name}`);
-  if(ar_name)changes.push(`ar_name: ${ar_name}`);
-  if(code)changes.push(`code: ${code}`);
-  if(barcode)changes.push(`barcode: ${barcode}`);
-  if(category&&category!==p.cat)changes.push(`category: ${p.cat}→${category}`);
-  if(subcategory&&subcategory!==p.sub)changes.push(`sub: ${p.sub}→${subcategory}`);
-  
-  // Handle image upload
-  const imgFile=document.getElementById('e_image_upload');
-  if(imgFile&&imgFile.files[0]){
-    const reader=new FileReader();
-    reader.onload=(e)=>{
-      pr._imageBase64=e.target.result;
-      saveAndLogChanges();
-    };
-    reader.readAsDataURL(imgFile.files[0]);
-    return;
-  }
-  
-  saveAndLogChanges();
-  
-  function saveAndLogChanges(){
-    const data={
-      ...pr,
-      notes:document.getElementById('e_notes')?.value||'',
-      weight:document.getElementById('e_weight')?.value||'',
-      dimensions:document.getElementById('e_dims')?.value||'',
-      volume:document.getElementById('e_volume')?.value||'',
-      bom,
-      packaging:{inner:document.getElementById('e_pkg_inner')?.value||'',carton:document.getElementById('e_pkg_carton')?.value||'',pallet:document.getElementById('e_pkg_pallet')?.value||'',unitsPerPallet:document.getElementById('e_pkg_units')?.value||''},
-      quality:{dimTol:document.getElementById('e_q_dim')?.value||'',visual:document.getElementById('e_q_vis')?.value||'',functional:document.getElementById('e_q_func')?.value||''},
-      assemblySteps:steps,revisions:revs,
-      _lastEditBy:SESSION.username,
-      _lastEditAt:new Date().toLocaleString('en-GB'),
-      _overrides:{en:en_name,ar:ar_name,code:code,barcode:barcode,cat:category,sub:subcategory}
-    };
-    saveProfile(currentPid,data);
-    logActivity('edited profile',p?.en||currentPid);
-    if(changes.length>0)logActivity('field changes',p?.en||currentPid,changes.join(' | '));
-    unsaved=false;editMode=false;
-    document.getElementById('edit-btn').textContent='✏ Edit';document.getElementById('edit-btn').classList.remove('active');
-    renderView(currentPid);updateCounts();renderGrid();
-    showToast('✓ Profile saved');
-  }
+  const p0=allProducts.find(x=>x.id===currentPid);
+  const[arOld,dOld]=findBC(p0);
+  const enVal=(document.getElementById('e_en_name')?.value||'').trim();
+  const arVal=(document.getElementById('e_ar_name')?.value||'').trim();
+  const codeVal=(document.getElementById('e_code')?.value||'').trim();
+  const barcodeVal=(document.getElementById('e_barcode')?.value||'').trim();
+  const catVal=(document.getElementById('e_category')?.value||'').trim();
+  const subVal=(document.getElementById('e_subcategory')?.value||'').trim();
+  const imgVal=document.getElementById('e_image_data')?.value||'';
+  // ── snapshot OLD effective values for the audit trail ──
+  const notesEl=document.getElementById('e_notes'),wEl=document.getElementById('e_weight'),
+        dimEl=document.getElementById('e_dims'),volEl=document.getElementById('e_volume'),
+        pkgI=document.getElementById('e_pkg_inner'),pkgC=document.getElementById('e_pkg_carton'),
+        pkgP=document.getElementById('e_pkg_pallet'),pkgU=document.getElementById('e_pkg_units'),
+        qD=document.getElementById('e_q_dim'),qV=document.getElementById('e_q_vis'),qF=document.getElementById('e_q_func');
+  const pkgOld=pr.packaging||{},qOld=pr.quality||{};
+  const oldVals={
+    'English name':p0?p0.en:'', 'Arabic name':pr._arName||arOld||'',
+    'internal code':pr._codeOverride||(dOld&&(dOld.codes||[])[0])||'',
+    'barcode':pr._barcodeOverride||(dOld&&(dOld.bc||[])[0])||'',
+    'category':p0?p0.cat:'', 'subcategory':p0?p0.sub:'',
+    'notes':pr.notes||'', 'weight':pr.weight||'', 'dimensions':pr.dimensions||'', 'volume':pr.volume||'',
+    'inner packaging':pkgOld.inner||'', 'carton':pkgOld.carton||'', 'pallet config':pkgOld.pallet||'', 'units/pallet':pkgOld.unitsPerPallet||'',
+    'tolerances':qOld.dimTol||'', 'visual criteria':qOld.visual||'', 'functional tests':qOld.functional||'',
+    'product image':pr._image?'(image set)':'(none)'
+  };
+  const newVals={
+    'English name':enVal, 'Arabic name':arVal, 'internal code':codeVal, 'barcode':barcodeVal,
+    'category':catVal, 'subcategory':subVal,
+    'notes':notesEl?notesEl.value:'', 'weight':wEl?wEl.value:'', 'dimensions':dimEl?dimEl.value:'', 'volume':volEl?volEl.value:'',
+    'inner packaging':pkgI?pkgI.value:'', 'carton':pkgC?pkgC.value:'', 'pallet config':pkgP?pkgP.value:'', 'units/pallet':pkgU?pkgU.value:'',
+    'tolerances':qD?qD.value:'', 'visual criteria':qV?qV.value:'', 'functional tests':qF?qF.value:'',
+    'product image':imgVal?'(image set)':'(none)'
+  };
+  const fieldChanges=[];
+  Object.keys(newVals).forEach(k=>{ if(String(oldVals[k]||'')!==String(newVals[k]||'')) fieldChanges.push({field:k,from:oldVals[k]||'—',to:newVals[k]||'—'}); });
+  const idOverrides={};
+  // Only store an English-name override when it actually differs from the website name
+  const baseEn=(p0&&p0._origEn!==undefined)?p0._origEn:(p0?p0.en:'');
+  if(enVal&&enVal!==baseEn)idOverrides._enName=enVal;
+  if(arVal)idOverrides._arName=arVal;
+  if(codeVal)idOverrides._codeOverride=codeVal;
+  if(barcodeVal)idOverrides._barcodeOverride=barcodeVal;
+  const baseCat=(p0&&p0._origCat!==undefined)?p0._origCat:(p0?p0.cat:'');
+  const baseSub=(p0&&p0._origSub!==undefined)?p0._origSub:(p0?p0.sub:'');
+  if(catVal&&catVal!==baseCat)idOverrides._catOverride=catVal;
+  if(subVal&&subVal!==baseSub)idOverrides._subOverride=subVal;
+  const data={
+    ...pr,
+    ...idOverrides,
+    notes:document.getElementById('e_notes')?.value||'',
+    weight:document.getElementById('e_weight')?.value||'',
+    dimensions:document.getElementById('e_dims')?.value||'',
+    volume:document.getElementById('e_volume')?.value||'',
+    bom,
+    packaging:{inner:document.getElementById('e_pkg_inner')?.value||'',carton:document.getElementById('e_pkg_carton')?.value||'',pallet:document.getElementById('e_pkg_pallet')?.value||'',unitsPerPallet:document.getElementById('e_pkg_units')?.value||''},
+    quality:{dimTol:document.getElementById('e_q_dim')?.value||'',visual:document.getElementById('e_q_vis')?.value||'',functional:document.getElementById('e_q_func')?.value||''},
+    assemblySteps:steps,revisions:revs,
+    _lastEditBy:SESSION.username,
+    _lastEditAt:new Date().toLocaleString('en-GB'),
+  };
+  if(imgVal)data._image=imgVal; else delete data._image;
+  saveProfile(currentPid,data);
+  applyOverrides();
+  const pName=allProducts.find(x=>x.id===currentPid)?.en||currentPid;
+  if(fieldChanges.length)logChanges(pName,fieldChanges);
+  else logActivity('edited profile',pName);
+  unsaved=false;editMode=false;
+  document.getElementById('edit-btn').textContent='✏ Edit';document.getElementById('edit-btn').classList.remove('active');
+  renderView(currentPid);updateCounts();renderGrid();
+  showToast('✓ Profile saved');
 }
 
 // ══ TRASH ════════════════════════════════════════════════════════════
@@ -1369,4 +1414,94 @@ function openPrint(){
 
   html+=`<div class="pc-grid2">
     <div class="pc-sec"><div class="pc-sec-title">Identification</div><table class="pc-tbl">
-      ${d?d.codes.map((c,i)=>`<tr><td>Code</td><td style="font-family:monospace">${c}</td></tr><tr><td>Barcode</td>
+      ${d?d.codes.map((c,i)=>`<tr><td>Code</td><td style="font-family:monospace">${c}</td></tr><tr><td>Barcode</td><td style="font-family:monospace">${(d.bc||[])[i]||''}</td></tr>`).join(''):'<tr><td colspan="2" class="pnf">No barcode data</td></tr>'}
+    </table></div>
+    <div class="pc-sec"><div class="pc-sec-title">Specifications</div><table class="pc-tbl">
+      <tr><td>Weight</td><td>${pr.weight||'<span class="pnf">—</span>'} kg</td></tr>
+      <tr><td>Dimensions</td><td>${pr.dimensions||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Volume</td><td>${pr.volume||'<span class="pnf">—</span>'} cm³</td></tr>
+    </table></div>
+  </div>`;
+
+  if(md||pr._dpIdx!==undefined){
+    html+=`<div class="pc-sec"><div class="pc-sec-title">Production data</div>
+      <div class="pc-grid2">
+        <div class="pc-box"><div class="pc-box-lbl">Mould name</div><div class="pc-box-val">${esc(pr.mouldName||mData.mc||mData.n||'—')}</div></div>
+        <div class="pc-box"><div class="pc-box-lbl">Cycle time</div><div class="pc-box-val">${esc(!empty(pr.cycleTime)?pr.cycleTime:mData.ct||'—')}s</div></div>
+        <div class="pc-box"><div class="pc-box-lbl">Pieces / cycle</div><div class="pc-box-val">${esc(!empty(pr.piecesCycle)?pr.piecesCycle:mData.pc||'—')}</div></div>
+        <div class="pc-box"><div class="pc-box-lbl">Part weight</div><div class="pc-box-val">${bom[0]?.partWeight?bom[0].partWeight+' kg':'—'}</div></div>
+        <div class="pc-box"><div class="pc-box-lbl">Machines</div><div class="pc-box-val" style="font-size:.85rem">${machines.length?machines.join(', '):'—'}</div></div>
+      </div>
+      ${ratios.length?`<div style="margin-top:3mm"><div class="pc-box-lbl" style="margin-bottom:1.5mm">Material mix</div>${ratios.map(r=>{const pct=total?Math.round((parseFloat(r.qty)||0)/total*100):0;return`<div style="font-size:8pt;margin-bottom:1mm">${esc(r.name)} — ratio ${esc(r.qty)} (${pct}%)</div>`;}).join('')}</div>`:''}
+      ${colours.length?`<div style="margin-top:2mm"><div class="pc-box-lbl">Colours</div><div style="font-size:8pt">${colours.map(c=>esc(c)).join(', ')}</div></div>`:''}
+    </div>`;
+  }
+
+  const pkg=pr.packaging||{};
+  html+=`<div class="pc-grid2">
+    <div class="pc-sec"><div class="pc-sec-title">Packaging</div><table class="pc-tbl">
+      <tr><td>Inner</td><td>${pkg.inner||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Carton</td><td>${pkg.carton||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Pallet</td><td>${pkg.pallet||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Units/pallet</td><td>${pkg.unitsPerPallet||'<span class="pnf">—</span>'}</td></tr>
+    </table></div>
+    <div class="pc-sec"><div class="pc-sec-title">Quality</div><table class="pc-tbl">
+      <tr><td>Tolerances</td><td>${(pr.quality||{}).dimTol||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Visual</td><td>${(pr.quality||{}).visual||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Functional</td><td>${(pr.quality||{}).functional||'<span class="pnf">—</span>'}</td></tr>
+    </table></div>
+  </div>`;
+
+  const steps=pr.assemblySteps||[];
+  if(steps.length)html+=`<div class="pc-sec"><div class="pc-sec-title">Assembly steps</div><ol style="padding-left:10pt;font-size:8.5pt;line-height:1.6">${steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol></div>`;
+
+  const revs=pr.revisions||[];
+  html+=`<div class="pc-sec"><div class="pc-sec-title">Revision history</div><table class="pc-tbl"><thead><tr><th>Rev</th><th>Date</th><th>Description</th><th>Approved by</th></tr></thead><tbody>${revs.length?revs.map(r=>`<tr><td>${esc(r.rev)}</td><td>${esc(r.date)}</td><td>${esc(r.desc)}</td><td>${esc(r.by)}</td></tr>`).join(''):'<tr><td>0</td><td>'+today+'</td><td>Initial</td><td>'+esc(SESSION.username)+'</td></tr>'}</tbody></table></div>`;
+
+  html+=`<div class="pc-footer"><span>Al Watania Plast — Product Profile System</span><span>${esc(p.cat)}</span><span>Printed: ${today}</span></div>`;
+
+  document.getElementById('print-card').innerHTML=html;
+  document.getElementById('print-overlay').classList.add('open');
+}
+function closePrint(){document.getElementById('print-overlay').classList.remove('open');}
+
+// ══ MODALS / HELPERS ══════════════════════════════════════════════════
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function showConfirm(title,msg,onOk){
+  document.getElementById('confirm-title').textContent=title;
+  document.getElementById('confirm-msg').textContent=msg;
+  document.getElementById('confirm-ok').onclick=()=>{closeModal('confirm-modal');onOk();};
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function showToast(msg){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),400);},2200);
+}
+function exportAll(){
+  const s=getStore();
+  const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),profiles:s},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='awp_profiles_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+// ══ SIDEBAR TOGGLE ════════════════════════════════════════════════════
+function toggleSidebar(){
+  const app=document.getElementById('app');
+  const collapsed=app.classList.toggle('sb-collapsed');
+  const btn=document.getElementById('sb-toggle');
+  btn.textContent=collapsed?'▶':'☰';
+  btn.title=collapsed?'Show sidebar':'Hide sidebar';
+  localStorage.setItem('awp_sb_collapsed',collapsed?'1':'0');
+}
+function restoreSidebarState(){
+  if(localStorage.getItem('awp_sb_collapsed')==='1'){
+    document.getElementById('app').classList.add('sb-collapsed');
+    const btn=document.getElementById('sb-toggle');
+    if(btn){btn.textContent='▶';btn.title='Show sidebar';}
+  }
+}
+
+// ══ BOOT ══════════════════════════════════════════════════════════════
+initAuth();
+</script>
+</body>
+</html>
