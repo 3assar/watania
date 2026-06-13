@@ -691,7 +691,7 @@ function init(){
     if(s._customProducts){
       s._customProducts.forEach(cp=>{if(!allProducts.find(p=>p.id===cp.id))allProducts.push(cp);});
     }
-    applyOverrides();updateCounts();renderGrid();
+    applyOverrides();buildCatList();updateCounts();renderGrid();
   });
 }
 function buildCatList(){
