@@ -767,7 +767,7 @@ function renderGrid(){
     const isTrashed=pr._trashed;
     const colCount=d?(d.colours||[]).length:0;
     const firstCode=d?(d.codes||[])[0]:'';
-    return`<div class="card" onclick="openPanel(${JSON.stringify(p.id)})">
+    return`<div class="card" onclick="openPanel(${esc(JSON.stringify(p.id))})">
       ${cardThumb(p)}
       <div class="card-body">
         <div class="card-name">${hl(p.en)}</div>
@@ -1330,7 +1330,7 @@ function saveNewProduct(){
   const code=document.getElementById('np-code').value.trim();
   const barcode=document.getElementById('np-barcode').value.trim();
   const ar=document.getElementById('np-ar').value.trim();
-  if(code||barcode||ar){s[newId]={_arName:ar||undefined,_customCode:code,_customBarcode:barcode,_lastEditBy:SESSION.username,_lastEditAt:new Date().toLocaleString('en-GB')};}
+  if(code||barcode||ar){s[newId]={_arName:ar||undefined,_codeOverride:code||undefined,_barcodeOverride:barcode||undefined,_lastEditBy:SESSION.username,_lastEditAt:new Date().toLocaleString('en-GB')};}
   saveStore(s);
   logActivity('added new product',name);
   closeModal('add-modal');buildCatList();updateCounts();renderGrid();
