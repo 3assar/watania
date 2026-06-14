@@ -725,7 +725,7 @@ function updateCounts(){
 
 // ══ FILTER/SEARCH ══════════════════════════════════════════════════════
 function setFilter(f,el){currentFilter=f;document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderGrid();}
-function setCat(c,el){currentCat=c;document.querySelectorAll('[onclick^="setCat"]').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderGrid();}
+function setCat(c,el){currentCat=c;document.querySelectorAll('#cat-list .sb-item').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderGrid();}
 function onSearch(){searchQ=document.getElementById('search').value.trim().toLowerCase();renderGrid();}
 
 function getFiltered(){
