@@ -1,0 +1,13 @@
+{
+  "name": "watania-scripts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "migrate:dry":  "node --env-file=scripts/.env scripts/migrate_products.js --dry-run",
+    "migrate":      "node --env-file=scripts/.env scripts/migrate_products.js",
+    "migrate:clear":"node --env-file=scripts/.env scripts/migrate_products.js --clear"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0"
+  }
+}
