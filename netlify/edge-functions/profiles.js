@@ -1,6 +1,6 @@
 export default async (request, context) => {
-  const supabaseUrl = context.env.get("SUPABASE_URL");
-  const supabaseAnonKey = context.env.get("SUPABASE_ANON_KEY");
+  const supabaseUrl = Netlify.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Netlify.env.get("SUPABASE_ANON_KEY");
 
   // CORS headers so the HTML page can call this API
   const cors = {
