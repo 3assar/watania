@@ -1,0 +1,4 @@
+﻿node_modules/
+scripts/.env
+*.env.local
+

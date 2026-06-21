@@ -1,0 +1,1846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Al Watania Plast — Production</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .view-tabs{display:flex;gap:.3rem}
+    .view-tab{padding:.28rem .75rem;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-size:.78rem;color:var(--muted)}
+    .view-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+    /* WO CARDS */
+    .wo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:.75rem;padding:1rem;align-content:start}
+    .wo-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid transparent;border-radius:10px;padding:.85rem .95rem;cursor:pointer;transition:box-shadow .15s,transform .12s}
+    .wo-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.1);transform:translateY(-1px)}
+    .wo-card.planned{border-left-color:#3b82f6}
+    .wo-card.in_progress{border-left-color:var(--accent2)}
+    .wo-card.completed{border-left-color:var(--green);opacity:.7}
+    .wo-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:.4rem;margin-bottom:.45rem}
+    .wo-id{font-size:.63rem;font-family:monospace;color:var(--muted);flex-shrink:0}
+    .wo-product{font-weight:700;font-size:.87rem;line-height:1.3}
+    .wo-mould{font-size:.7rem;color:var(--muted);margin-bottom:.35rem;font-style:italic}
+    .wo-machine{font-size:.7rem;color:var(--muted);margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem}
+    .prog-wrap{margin-bottom:.4rem}
+    .prog-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:.22rem}
+    .prog-fill{height:100%;border-radius:3px;background:var(--accent2);transition:width .3s}
+    .prog-fill.done{background:var(--green)}
+    .wo-meta{display:flex;gap:.4rem;flex-wrap:wrap;font-size:.67rem;color:var(--muted)}
+    .st{display:inline-flex;align-items:center;padding:.1rem .42rem;border-radius:20px;font-size:.6rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+    .st-planned{background:#dbeafe;color:#1d4ed8}
+    .st-in_progress{background:#fef3c7;color:#b45309}
+    .st-completed{background:#dcfce7;color:#15803d}
+    .sec-chip{padding:.1rem .32rem;border-radius:4px;font-size:.6rem;font-weight:700}
+    .sec-a{background:#fee2e2;color:#b91c1c}
+    .sec-b{background:#dbeafe;color:#1d4ed8}
+    .sec-c{background:#dcfce7;color:#15803d}
+
+    /* WO DETAIL PANEL */
+    .wo-panel{position:fixed;top:0;right:-680px;width:660px;max-width:100vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:200;display:flex;flex-direction:column;transition:right .25s ease;overflow:hidden}
+    .wo-panel.open{right:0}
+    .wp-hdr{display:flex;align-items:center;gap:.45rem;padding:.75rem 1rem;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+    .wp-hdr h2{flex:1;font-size:.92rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+    .wp-body{flex:1;overflow-y:auto;padding:1rem}
+    .wp-sec{margin-bottom:1.15rem}
+    .wp-sec-hdr{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);border-bottom:1px solid var(--border);padding-bottom:.28rem;margin-bottom:.6rem;display:flex;align-items:center;justify-content:space-between}
+    .wp-g2{display:grid;grid-template-columns:1fr 1fr;gap:.4rem .8rem}
+    .wp-g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem .8rem}
+    .wp-kv label{font-size:.6rem;color:var(--muted);display:block;margin-bottom:.1rem}
+    .wp-kv .v{font-size:.8rem;font-weight:600}
+    .wp-kv .v.mono{font-family:monospace}
+    .wp-kv .v.hi{color:var(--accent)}
+    .ctbl{width:100%;border-collapse:collapse;font-size:.75rem}
+    .ctbl th{background:var(--surface2);padding:.28rem .45rem;text-align:left;font-size:.62rem;font-weight:700;color:var(--muted);border:1px solid var(--border)}
+    .ctbl td{padding:.26rem .45rem;border:1px solid var(--border)}
+    .ctbl tfoot td{font-weight:700;background:var(--surface2)}
+    .ltbl{width:100%;border-collapse:collapse;font-size:.72rem}
+    .ltbl th{background:var(--surface2);padding:.26rem .38rem;text-align:center;font-size:.6rem;font-weight:700;color:var(--muted);border:1px solid var(--border)}
+    .ltbl td{padding:.26rem .38rem;border:1px solid var(--border);text-align:center}
+    .ltbl td:first-child{text-align:left;font-family:monospace;font-size:.67rem}
+    .ltbl tfoot td{font-weight:700;background:var(--surface2)}
+
+    /* WIZARD */
+    .wiz-panel{position:fixed;top:0;right:-720px;width:700px;max-width:100vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:300;display:flex;flex-direction:column;transition:right .25s ease;overflow:hidden}
+    .wiz-panel.open{right:0}
+    .wiz-hdr{padding:.75rem 1rem;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:.7rem}
+    .wiz-hdr h2{flex:1;font-size:.92rem;font-weight:700}
+    .wiz-steps{display:flex;align-items:center;flex-shrink:0}
+    .wiz-step{display:flex;align-items:center;gap:.25rem;font-size:.67rem;color:var(--muted)}
+    .wsn{width:19px;height:19px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;flex-shrink:0}
+    .wiz-step.active .wsn{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .wiz-step.done .wsn{background:var(--green);color:#fff;border-color:var(--green)}
+    .wiz-step.active{color:var(--text);font-weight:600}
+    .wsl{width:20px;height:2px;background:var(--border);margin:0 .15rem}
+    .wiz-body{flex:1;overflow-y:auto;padding:1.1rem}
+    .wiz-footer{padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;gap:.55rem;align-items:center;flex-shrink:0}
+
+    /* FORM */
+    .f-sec{margin-bottom:1.25rem}
+    .f-sec-hdr{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);border-bottom:1px solid var(--border);padding-bottom:.28rem;margin-bottom:.65rem}
+    .f-g2{display:grid;grid-template-columns:1fr 1fr;gap:.55rem}
+    .f-g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem}
+    .f-g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.45rem}
+    .f-field{display:flex;flex-direction:column;gap:.2rem}
+    .f-lbl{font-size:.63rem;font-weight:600;color:var(--muted)}
+    .f-in{padding:.38rem .55rem;border:1px solid var(--border);border-radius:7px;font-size:.82rem;background:var(--surface);color:var(--text);outline:none;width:100%;box-sizing:border-box}
+    .f-in:focus{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(232,114,46,.12)}
+    .f-sel{padding:.38rem .55rem;border:1px solid var(--border);border-radius:7px;font-size:.82rem;background:var(--surface);color:var(--text);outline:none;width:100%;box-sizing:border-box}
+    .f-calc{font-size:.72rem;color:var(--accent);font-weight:600;padding:.38rem .55rem;background:rgba(232,114,46,.07);border:1px solid rgba(232,114,46,.2);border-radius:7px;font-family:monospace;text-align:center;min-height:31px;display:flex;align-items:center;justify-content:center}
+    .f-hint{font-size:.63rem;color:var(--muted);margin-top:.12rem}
+
+    /* COLOUR ROWS */
+    .cr-hdr{display:grid;grid-template-columns:1fr 88px 76px 66px 26px;gap:.38rem;font-size:.6rem;color:var(--muted);font-weight:600;padding-bottom:.2rem}
+    .cr-row{display:grid;grid-template-columns:1fr 88px 76px 66px 26px;gap:.38rem;align-items:center}
+    .cr-calc{font-size:.7rem;font-family:monospace;color:var(--accent);text-align:center;padding:.38rem .1rem}
+    .cr-totals{font-size:.7rem;font-family:monospace;text-align:right;color:var(--muted);margin-top:.4rem;padding-top:.4rem;border-top:1px dashed var(--border)}
+    .cr-totals b{color:var(--text)}
+
+    /* PRODUCT SEARCH */
+    .psearch-wrap{position:relative}
+    .psearch-dd{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:10;max-height:200px;overflow-y:auto;margin-top:2px}
+    .psearch-item{padding:.4rem .65rem;cursor:pointer;font-size:.8rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+    .psearch-item:last-child{border-bottom:none}
+    .psearch-item:hover{background:var(--surface2)}
+    .psearch-ar{font-size:.68rem;color:var(--muted);direction:rtl}
+    .psearch-cat{font-size:.62rem;color:var(--muted)}
+
+
+    /* MACHINE PICKER */
+    .mach-picker{display:flex;flex-direction:column;gap:.28rem;max-height:280px;overflow-y:auto}
+    .mach-item{display:flex;align-items:center;gap:.55rem;padding:.42rem .6rem;border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;transition:background .1s}
+    .mach-item:hover{background:var(--surface2)}
+    .mach-item.selected{border-color:var(--accent);background:rgba(201,76,40,.05)}
+    .mach-item.recommended{border-color:var(--green)}
+    .mach-name{font-weight:600;flex:1}
+    .mach-ton{font-size:.7rem;color:var(--muted);font-family:monospace}
+    .mach-queue{font-size:.65rem;color:var(--muted);margin-left:auto}
+    .mach-rec-tag{font-size:.6rem;color:var(--green);font-weight:700;white-space:nowrap}
+
+    /* STATUS BADGES — paused */
+    .st-paused{background:#fef3c7;color:#92400e}
+    .wo-card.paused{border-left-color:#f59e0b}
+
+    /* MODALS — raised above WO panel (z-index 200) and wizard (300) */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:450;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--surface);border-radius:12px;padding:1.4rem 1.5rem;width:480px;max-width:calc(100vw - 2rem);box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto}
+    .modal h3{margin:0 0 1rem;font-size:.95rem}
+    .modal-foot{display:flex;gap:.5rem;margin-top:1.1rem;justify-content:flex-end}
+
+    /* PAUSE REASONS */
+    .pause-reason-opt{display:flex;align-items:center;gap:.5rem;padding:.38rem .55rem;border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:.82rem;margin-bottom:.28rem}
+    .pause-reason-opt input{flex-shrink:0}
+    .pause-reason-opt.selected{border-color:var(--accent);background:rgba(201,76,40,.05)}
+
+    /* TIMER STRIP */
+    .timer-strip{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center;background:var(--surface2);border-radius:8px;padding:.45rem .7rem;font-size:.75rem;margin-bottom:.65rem}
+    .timer-strip .ts-lbl{color:var(--muted);font-size:.67rem}
+    .timer-strip .ts-val{font-weight:700}
+    .timer-strip .ts-over{color:#dc2626}
+    .timer-strip .ts-ok{color:var(--green)}
+
+    /* FLOOR VIEW */
+    .floor-wrap{padding:1rem}
+    .floor-hdr{display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+    .floor-sec-btn{padding:.25rem .65rem;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-size:.75rem;color:var(--muted)}
+    .floor-sec-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .floor-sector{margin-bottom:1.5rem}
+    .floor-sector-hdr{font-size:.85rem;font-weight:700;padding:.45rem 0;border-bottom:2px solid var(--border);margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+    .floor-rows{display:flex;flex-direction:column;gap:.32rem}
+    .frow{display:grid;grid-template-columns:150px 1fr 190px;gap:.5rem 1rem;align-items:center;padding:.55rem .75rem;background:var(--surface);border:1px solid var(--border);border-radius:9px;border-left:3px solid transparent;cursor:default}
+    .frow.clickable{cursor:pointer}.frow.clickable:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+    .frow.idle{opacity:.5;border-left-color:var(--border)}
+    .frow.in_progress{border-left-color:var(--accent2)}
+    .frow.paused{border-left-color:#f59e0b}
+    .frow.planned{border-left-color:#3b82f6}
+    .frow-mach{font-size:.8rem;font-weight:700}
+    .frow-ton{font-size:.65rem;color:var(--muted);font-family:monospace}
+    .frow-wo-name{font-size:.78rem;font-weight:600;line-height:1.3}
+    .frow-wo-sub{font-size:.67rem;color:var(--muted);margin-top:.15rem}
+    .frow-next{font-size:.7rem;color:var(--muted)}
+    .frow-next b{color:var(--text);font-size:.72rem}
+
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Al Watania <span>Plast</span><br><small style="font-size:.65rem;color:var(--muted);font-weight:400;letter-spacing:.05em">Production</small></div>
+    <div class="login-field"><label>Username</label><input type="text" id="lu" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="login-field"><label>Password</label><input type="password" id="lp" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <div class="topbar">
+    <button class="tb-btn" onclick="toggleSidebar()" style="padding:.3rem .5rem;flex-shrink:0">☰</button>
+    <div class="logo">Al Watania <span>Plast</span></div>
+    <div class="view-tabs">
+      <button class="view-tab active" id="tab-orders" onclick="switchView('orders',this)">Work Orders</button>
+      <button class="view-tab" id="tab-floor"  onclick="switchView('floor',this)">Floor View</button>
+    </div>
+    <div class="search-wrap" id="search-wrap">
+      <svg class="si" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="17" y2="17"/></svg>
+      <input type="text" id="search" placeholder="Search product, machine, WO…" oninput="onSearch()">
+    </div>
+    <div class="tb-right">
+      <span id="sync-status" class="tb-btn">… Loading</span>
+      <span class="user-badge" id="user-badge">—</span>
+      <button class="tb-btn primary" id="new-wo-btn" onclick="openWizard(null)" style="display:none">+ New Work Order</button>
+      <a href="library.html" class="tb-btn" style="text-decoration:none">📋 Library</a>
+      <button class="tb-btn danger" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-sec-title">Status</div>
+    <button class="sb-item active" onclick="setFilter('all',this)"><span class="sb-icon">📋</span>All active<span class="sb-count" id="cnt-all">—</span></button>
+    <button class="sb-item" onclick="setFilter('planned',this)"><span class="sb-icon">🕐</span>Planned<span class="sb-count" id="cnt-planned">0</span></button>
+    <button class="sb-item" onclick="setFilter('in_progress',this)"><span class="sb-icon">⚙</span>In Progress<span class="sb-count" id="cnt-running">0</span></button>
+    <button class="sb-item" onclick="setFilter('paused',this)"><span class="sb-icon">⏸</span>Paused<span class="sb-count" id="cnt-paused">0</span></button>
+    <button class="sb-item" onclick="setFilter('completed',this)"><span class="sb-icon">✓</span>Completed<span class="sb-count" id="cnt-done">0</span></button>
+    <div class="sb-div"></div>
+    <button class="sb-item" onclick="setFilter('archive',this)"><span class="sb-icon">📦</span>Archive<span class="sb-count" id="cnt-archive">0</span></button>
+    <div class="sb-div"></div>
+    <div class="sb-sec-title">Sector</div>
+    <button class="sb-item" onclick="setSector('',this)"><span class="sb-icon">🏭</span>All sectors</button>
+    <button class="sb-item" onclick="setSector('A',this)"><span class="sb-icon sec-chip sec-a">A</span>Sector A</button>
+    <button class="sb-item" onclick="setSector('B',this)"><span class="sb-icon sec-chip sec-b">B</span>Sector B</button>
+    <button class="sb-item" onclick="setSector('C',this)"><span class="sb-icon sec-chip sec-c">C</span>Sector C</button>
+  </aside>
+
+  <main class="main" id="main-content">
+    <div id="view-orders">
+      <div class="grid-hdr"><div class="grid-title" id="grid-title">All Active Work Orders</div><div class="res-info" id="res-info"></div></div>
+      <div class="wo-grid" id="wo-grid"></div>
+    </div>
+    <div id="view-floor" style="display:none">
+      <div class="floor-wrap">
+        <div class="floor-hdr">
+          <span style="font-size:.78rem;font-weight:700;color:var(--muted)">Sector:</span>
+          <button class="floor-sec-btn active" id="fsec-all" onclick="setFloorSector('',this)">All</button>
+          <button class="floor-sec-btn" id="fsec-A" onclick="setFloorSector('A',this)"><span class="sec-chip sec-a">A</span></button>
+          <button class="floor-sec-btn" id="fsec-B" onclick="setFloorSector('B',this)"><span class="sec-chip sec-b">B</span></button>
+          <button class="floor-sec-btn" id="fsec-C" onclick="setFloorSector('C',this)"><span class="sec-chip sec-c">C</span></button>
+        </div>
+        <div id="floor-content"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- OVERLAY -->
+<div class="p-overlay" id="overlay" onclick="closeAll()"></div>
+
+<!-- WO DETAIL PANEL -->
+<div class="wo-panel" id="wo-panel">
+  <div class="wp-hdr">
+    <h2 id="wp-title">Work Order</h2>
+    <button class="ph-btn" id="wp-start-btn"    onclick="startWO()"    style="display:none">▶ Start</button>
+    <button class="ph-btn green" id="wp-done-btn" onclick="completeWO()" style="display:none">✓ Complete</button>
+    <button class="ph-btn" id="wp-pause-btn"   onclick="openPauseModal()" style="display:none">⏸ Pause</button>
+    <button class="ph-btn" id="wp-resume-btn"  onclick="resumeWO()"   style="display:none">▶ Resume</button>
+    <button class="ph-btn green" id="wp-edit-btn" onclick="openWizardEdit()" style="display:none">✏ Edit</button>
+    <button class="ph-btn" onclick="openPrint()">🖨 Print</button>
+    <button class="ph-btn" onclick="openLogModal()">+ Log</button>
+    <button class="ph-btn" id="wp-archive-btn" onclick="archiveWO()"   style="display:none">📦 Archive</button>
+    <button class="ph-btn red" id="wp-del-btn" onclick="deleteWO()" style="display:none">🗑</button>
+    <button class="ph-btn" onclick="closeWOPanel()" style="padding:.28rem .5rem">✕</button>
+  </div>
+  <div class="wp-body" id="wp-body"></div>
+</div>
+
+<!-- WIZARD PANEL -->
+<div class="wiz-panel" id="wiz-panel">
+  <div class="wiz-hdr">
+    <h2 id="wiz-title">New Work Order</h2>
+    <div class="wiz-steps" id="wiz-steps"></div>
+    <button class="ph-btn" onclick="closeWizard()" style="padding:.28rem .5rem">✕</button>
+  </div>
+  <div class="wiz-body" id="wiz-body"></div>
+  <div class="wiz-footer" id="wiz-footer"></div>
+</div>
+
+<!-- LOG MODAL -->
+<div class="modal-overlay" id="log-overlay" onclick="if(event.target===this)closeLogModal()">
+  <div class="modal" id="log-modal">
+    <h3>Log Daily Production</h3>
+    <div class="f-g2" style="margin-bottom:.7rem">
+      <div class="f-field"><label class="f-lbl">Date</label><input class="f-in" type="date" id="log-date"></div>
+      <div></div>
+    </div>
+    <div class="f-g2" style="margin-bottom:.6rem">
+      <div>
+        <div style="font-size:.68rem;font-weight:700;color:var(--accent2);margin-bottom:.5rem">☀ Day Shift</div>
+        <div class="f-field" style="margin-bottom:.4rem"><label class="f-lbl">Worker</label><input class="f-in" id="log-day-worker" placeholder="Name"></div>
+        <div class="f-field" style="margin-bottom:.4rem"><label class="f-lbl">Produced (pcs)</label><input class="f-in" type="number" id="log-day-prod" min="0" placeholder="0"></div>
+        <div class="f-field"><label class="f-lbl">Waste (pcs)</label><input class="f-in" type="number" id="log-day-waste" min="0" placeholder="0"></div>
+      </div>
+      <div>
+        <div style="font-size:.68rem;font-weight:700;color:#6366f1;margin-bottom:.5rem">🌙 Night Shift</div>
+        <div class="f-field" style="margin-bottom:.4rem"><label class="f-lbl">Worker</label><input class="f-in" id="log-night-worker" placeholder="Name"></div>
+        <div class="f-field" style="margin-bottom:.4rem"><label class="f-lbl">Produced (pcs)</label><input class="f-in" type="number" id="log-night-prod" min="0" placeholder="0"></div>
+        <div class="f-field"><label class="f-lbl">Waste (pcs)</label><input class="f-in" type="number" id="log-night-waste" min="0" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="f-field" style="margin-bottom:.9rem"><label class="f-lbl">Notes</label><textarea class="f-in" id="log-notes" rows="2" style="resize:vertical"></textarea></div>
+    <div id="log-summary" style="font-size:.72rem;color:var(--muted);margin-bottom:.8rem;font-family:monospace"></div>
+    <div style="display:flex;gap:.5rem">
+      <button class="btn btn-primary" onclick="saveLogEntry()">Save entry</button>
+      <button class="btn btn-ghost"   onclick="closeLogModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAUSE MODAL -->
+<div class="modal-overlay" id="pause-overlay" onclick="if(event.target===this)closePauseModal()">
+  <div class="modal" style="width:420px">
+    <h3>⏸ Pause order — state reason</h3>
+    <div id="pause-reason-list">
+      <label class="pause-reason-opt" id="pr-Breakdown"><input type="radio" name="pause-reason" value="Breakdown"> Breakdown / machine fault</label>
+      <label class="pause-reason-opt" id="pr-Material"><input type="radio" name="pause-reason" value="Material shortage"> Material shortage</label>
+      <label class="pause-reason-opt" id="pr-Colour"><input type="radio" name="pause-reason" value="Colour change"> Colour change</label>
+      <label class="pause-reason-opt" id="pr-Mould"><input type="radio" name="pause-reason" value="Mould issue"> Mould issue</label>
+      <label class="pause-reason-opt" id="pr-Setup"><input type="radio" name="pause-reason" value="Setup"> Setup / changeover</label>
+      <label class="pause-reason-opt" id="pr-Other"><input type="radio" name="pause-reason" value="Other" onchange="document.getElementById('pause-other-wrap').style.display=''"> Other</label>
+    </div>
+    <div id="pause-other-wrap" style="display:none;margin-top:.5rem">
+      <textarea class="f-in" id="pause-other-text" rows="2" placeholder="Describe the reason (required)" style="resize:vertical;width:100%"></textarea>
+    </div>
+    <div id="pause-err" style="color:#dc2626;font-size:.75rem;margin-top:.4rem;display:none"></div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="confirmPause()">Confirm pause</button>
+      <button class="btn btn-ghost"   onclick="closePauseModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERRUN MODAL -->
+<div class="modal-overlay" id="overrun-overlay">
+  <div class="modal" style="width:460px">
+    <h3>⏱ Order duration check</h3>
+    <p id="overrun-msg" style="font-size:.82rem;color:var(--muted);margin:.3rem 0 .9rem"></p>
+    <p style="font-size:.85rem;font-weight:600;margin-bottom:.65rem">Did this order actually run over the planned time?</p>
+    <div style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.7rem">
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;cursor:pointer">
+        <input type="radio" name="overrun-choice" value="yes" id="overrun-yes"> Yes — it overran (state reason)
+      </label>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;cursor:pointer">
+        <input type="radio" name="overrun-choice" value="no"  id="overrun-no">  No — it finished within expected range
+      </label>
+    </div>
+    <textarea class="f-in" id="overrun-reason" rows="2" placeholder="Reason for overrun (required if Yes)" style="resize:vertical;width:100%;display:none"></textarea>
+    <div id="overrun-err" style="color:#dc2626;font-size:.75rem;margin-top:.4rem;display:none"></div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="confirmComplete()">Complete order</button>
+      <button class="btn btn-ghost"   onclick="document.getElementById('overrun-overlay').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EARLY COMPLETION MODAL -->
+<div class="modal-overlay" id="early-overlay">
+  <div class="modal" style="width:460px">
+    <h3>✓ Order completed early</h3>
+    <p id="early-msg" style="font-size:.82rem;color:var(--muted);margin:.3rem 0 .9rem"></p>
+    <div class="f-field" style="margin-bottom:.5rem">
+      <label class="f-lbl">Reason / note (required)</label>
+      <textarea class="f-in" id="early-reason" rows="3" placeholder="e.g. Actual cycle time faster than BOM spec, checked and confirmed" style="resize:vertical;width:100%"></textarea>
+    </div>
+    <div id="early-err" style="color:#dc2626;font-size:.75rem;margin-top:.4rem;display:none"></div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="confirmComplete()">Complete order</button>
+      <button class="btn btn-ghost"   onclick="document.getElementById('early-overlay').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const BAG_WT_G   = 25000;
+const DYE_RATIO  = 0.5;
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let allWOs        = [];
+let allMachines   = [];
+let allProducts   = [];
+let overridesMap  = {};
+let mouldsMap     = {};   // dp_idx → { name_ar, mould_code }
+let currentView   = 'orders';
+let currentFilter = 'all';
+let currentSector = '';
+let floorSector   = '';
+let searchQ       = '';
+let currentWoId   = null;
+let _pendingCompleteData = null;
+let _timerInterval = null;
+
+// Wizard
+let wizardStep = 1;
+let wizardData = {};
+let editingWoId = null;
+
+// ── CALCULATIONS (mirror Excel formulas exactly) ───────────────────────────────
+function calcBags(weightG, units) {
+  if (!weightG || !units) return 0;
+  return Math.round((weightG * units / BAG_WT_G) * 100) / 100;
+}
+function calcDye(bags)  { return Math.round(bags * DYE_RATIO * 100) / 100; }
+function calcOpHours(cycleS, totalQty, ppc) {
+  if (!cycleS || !totalQty) return 0;
+  return Math.round((cycleS * totalQty / (ppc || 1)) / 3600 * 100) / 100;
+}
+function calcTotalQty(colours) { return colours.reduce((a, c) => a + (parseInt(c.units) || 0), 0); }
+function calcTotalBags(colours, weightG) { return Math.round(colours.reduce((a, c) => a + calcBags(weightG, parseInt(c.units) || 0), 0) * 100) / 100; }
+function pct(produced, total) { return total ? Math.min(100, Math.round(produced / total * 100)) : 0; }
+function parseColours(json) { try { return Array.isArray(json) ? json : JSON.parse(json || '[]'); } catch { return []; } }
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function machineById(id)  { return allMachines.find(m => m.id === id); }
+function productById(id)  { return allProducts.find(p => String(p.id) === String(id)); }
+function getOv(pid)       { return overridesMap[String(pid)] || {}; }
+function machineSector(m) { return m ? (m.sector || m.name?.[0] || '') : ''; }
+function woSector(wo)     { return machineSector(machineById(wo.machine_id)); }
+function fmtDate(d)       { return d ? new Date(d).toLocaleDateString('en-GB') : '—'; }
+function normBomRecipes(row) {
+  if (row.recipes?.length) return row.recipes;
+  if (row.materialRatios?.length) return [{ name: 'Default', ratios: row.materialRatios }];
+  return [];
+}
+
+function mouldLabel(row) {
+  const linked = row._dpIdx != null ? mouldsMap[row._dpIdx] : null;
+  const name   = linked?.name_ar || '';
+  const code   = row.mouldName   || linked?.mould_code || '';
+  if (name && code && name !== code) return { primary: name, secondary: code };
+  return { primary: name || code || '', secondary: '' };
+}
+function lastWOForProduct(pid) {
+  return allWOs
+    .filter(w => String(w.product_id) === String(pid))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null;
+}
+function activeWOsForMachine(machineId) {
+  return allWOs
+    .filter(w => w.machine_id === machineId && w.status !== 'completed' && !w.archived)
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+}
+
+// ── SYNC STATUS ───────────────────────────────────────────────────────────────
+function setSyncStatus(state, msg) {
+  const el = document.getElementById('sync-status');
+  const icons = { ok: '☁', saving: '↑', error: '⚠', loading: '…' };
+  el.textContent = (icons[state] || '') + ' ' + msg;
+  el.style.color = state === 'error' ? 'var(--red)' : state === 'saving' ? 'var(--amber)' : state === 'ok' ? 'var(--green)' : 'var(--muted)';
+}
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.background = type === 'error' ? 'var(--red)' : 'var(--green)';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2500);
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('user-badge').textContent = SESSION.username + ' (' + SESSION.role + ')';
+  if (canEdit() || isSupervisor()) document.getElementById('new-wo-btn').style.display = '';
+  init();
+}
+
+async function init() {
+  setSyncStatus('loading', 'Loading…');
+  try {
+    const [wos, machines, products, overrides, moulds] = await Promise.all([
+      dbGetWorkOrders(),
+      SB.fetch('/machines?select=*&order=sector,name'),
+      dbGetProducts(),
+      dbGetOverridesLight(),
+      SB.fetch('/moulds?select=dp_idx,name_ar,mould_code&order=dp_idx'),
+    ]);
+    allWOs      = wos;
+    allMachines = machines;
+    allProducts = products.map(p => ({ ...p, en: p.name }));
+    overridesMap = {};
+    for (const ov of overrides) overridesMap[String(ov.product_id)] = ov;
+    mouldsMap = {};
+    for (const m of (moulds || [])) {
+      if (m.dp_idx != null) mouldsMap[m.dp_idx] = m;
+    }
+    renderWOGrid();
+    updateCounts();
+    setSyncStatus('ok', 'Synced');
+  } catch (e) {
+    setSyncStatus('error', 'Load failed');
+    console.error(e);
+  }
+}
+
+// ── VIEW SWITCHING ────────────────────────────────────────────────────────────
+function setFloorSector(s, el) {
+  floorSector = s;
+  document.querySelectorAll('.floor-sec-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderFloorView();
+}
+
+function switchView(view, el) {
+  currentView = view;
+  document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('view-orders').style.display = view === 'orders' ? '' : 'none';
+  document.getElementById('view-floor').style.display  = view === 'floor'  ? '' : 'none';
+  if (view === 'floor') document.getElementById('app').classList.add('sb-collapsed');
+  else document.getElementById('app').classList.remove('sb-collapsed');
+  document.getElementById('search-wrap').style.display = view === 'orders' ? '' : 'none';
+  if (view === 'floor') renderFloorView();
+}
+function toggleSidebar() { document.getElementById('app').classList.toggle('sb-collapsed'); }
+
+// ── FILTERS ───────────────────────────────────────────────────────────────────
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.sidebar .sb-item').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const labels = { all: 'All Active Work Orders', planned: 'Planned', in_progress: 'In Progress', paused: 'Paused', completed: 'Completed', archive: 'Archive' };
+  document.getElementById('grid-title').textContent = labels[f] || 'Work Orders';
+  renderWOGrid();
+}
+function setSector(s, el) {
+  currentSector = s;
+  document.querySelectorAll('.sidebar .sb-item').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderWOGrid();
+}
+function onSearch() { searchQ = document.getElementById('search').value.trim().toLowerCase(); renderWOGrid(); }
+
+function getFiltered() {
+  return allWOs.filter(wo => {
+    if (currentFilter === 'archive') return wo.archived === true;
+    if (wo.archived) return false;
+    if (currentFilter === 'all' && wo.status === 'completed') return false;
+    if (currentFilter !== 'all' && wo.status !== currentFilter) return false;
+    if (currentSector && woSector(wo) !== currentSector) return false;
+    if (searchQ) {
+      const p = productById(wo.product_id);
+      const m = machineById(wo.machine_id);
+      const q = searchQ;
+      if (!wo.id.toLowerCase().includes(q) &&
+          !(p?.name||'').toLowerCase().includes(q) &&
+          !(p?.name_ar||'').includes(q) &&
+          !(m?.name||'').toLowerCase().includes(q) &&
+          !(wo.mould_name||'').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function updateCounts() {
+  let all = 0, planned = 0, running = 0, paused = 0, done = 0, archived = 0;
+  allWOs.forEach(wo => {
+    if (wo.archived) { archived++; return; }
+    if (wo.status !== 'completed') all++;
+    if (wo.status === 'planned')     planned++;
+    if (wo.status === 'in_progress') running++;
+    if (wo.status === 'paused')      paused++;
+    if (wo.status === 'completed')   done++;
+  });
+  document.getElementById('cnt-all').textContent     = all;
+  document.getElementById('cnt-planned').textContent = planned;
+  document.getElementById('cnt-running').textContent = running;
+  document.getElementById('cnt-paused').textContent  = paused;
+  document.getElementById('cnt-done').textContent    = done;
+  document.getElementById('cnt-archive').textContent = archived;
+}
+
+// ── WO GRID ───────────────────────────────────────────────────────────────────
+function renderWOGrid() {
+  const list = getFiltered();
+  document.getElementById('res-info').textContent = list.length + ' work orders';
+  const grid = document.getElementById('wo-grid');
+  if (!list.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--muted)">No work orders found.</div>';
+    return;
+  }
+  grid.innerHTML = list.map(wo => {
+    const p    = productById(wo.product_id);
+    const m    = machineById(wo.machine_id);
+    const sec  = woSector(wo);
+    const colours = parseColours(wo.colours_json);
+    const produced = wo.produced_qty || 0;
+    const total    = wo.total_qty || 0;
+    const pp       = pct(produced, total);
+    return `<div class="wo-card ${wo.status}" onclick="openWOPanel('${esc(wo.id)}')">
+      <div class="wo-card-top">
+        <div class="wo-id">${esc(wo.id)}</div>
+        <span class="st st-${wo.status}">${wo.status.replace('_',' ')}</span>
+      </div>
+      <div class="wo-product">${esc(p?.en || wo.product_id)}</div>
+      ${wo.mould_name ? `<div class="wo-mould">⬡ ${esc(wo.mould_name)}</div>` : ''}
+      <div class="wo-machine">
+        <span class="sec-chip sec-${sec.toLowerCase()}">${sec}</span>
+        ${esc(m?.name || '—')}${m?.tonnage ? ` · ${m.tonnage}T` : ''}
+      </div>
+      <div class="prog-wrap">
+        <div style="display:flex;justify-content:space-between;font-size:.67rem;color:var(--muted)">
+          <span>${produced.toLocaleString()} / ${total.toLocaleString()} pcs</span>
+          <span>${pp}%</span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill${wo.status==='completed'?' done':''}" style="width:${pp}%"></div></div>
+      </div>
+      <div class="wo-meta">
+        ${colours.length ? `<span>${colours.length} colour${colours.length>1?'s':''}</span>` : ''}
+        ${wo.planned_runtime_hours ? `<span>~${wo.planned_runtime_hours}h</span>` : ''}
+        ${wo.due_date ? `<span>Due ${fmtDate(wo.due_date)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── LIVE TIMER ────────────────────────────────────────────────────────────────
+function updateTimerUI() {
+  const wo = currentWoId ? allWOs.find(w => w.id === currentWoId) : null;
+  if (!wo || !wo.started_at) return;
+  const endMs    = wo.completed_at ? new Date(wo.completed_at).getTime() : Date.now();
+  const elapsed  = endMs - new Date(wo.started_at).getTime();
+  const plannedH = parseFloat(wo.planned_runtime_hours) || 0;
+  const fmtH = ms => { const h = Math.floor(ms/3_600_000), m = Math.floor((ms%3_600_000)/60000); return `${h}h ${m}m`; };
+
+  const elEl = document.getElementById('ts-elapsed');
+  if (elEl) elEl.textContent = fmtH(elapsed);
+
+  if (plannedH) {
+    const expectedEndMs = new Date(wo.started_at).getTime() + plannedH * 3_600_000;
+    const diff    = endMs - expectedEndMs;
+    const isOver  = diff > 0;
+    const diffAbs = Math.abs(diff);
+    const label   = wo.status === 'completed'
+      ? (isOver ? 'Ran over by' : 'Finished early by')
+      : (isOver ? 'Overdue by' : 'Remaining');
+
+    const lblEl  = document.getElementById('ts-diff-lbl');
+    const diffEl = document.getElementById('ts-diff');
+    if (lblEl)  lblEl.textContent = label;
+    if (diffEl) {
+      diffEl.textContent = fmtH(diffAbs);
+      diffEl.className   = 'ts-val ' + (isOver ? 'ts-over' : 'ts-ok');
+    }
+
+    const timePct  = Math.min(100, Math.round((elapsed / (plannedH * 3_600_000)) * 100));
+    const timeOver = elapsed > plannedH * 3_600_000;
+    const fillEl   = document.getElementById('time-prog-fill');
+    const pctEl    = document.getElementById('time-prog-pct');
+    if (fillEl) {
+      fillEl.style.width      = timePct + '%';
+      fillEl.style.background = timeOver ? '#dc2626' : timePct > 90 ? '#f59e0b' : 'var(--accent2)';
+    }
+    if (pctEl) pctEl.textContent = timePct + '%' + (timeOver ? ' (over)' : '');
+  }
+}
+
+function startPanelTimer(wo) {
+  stopPanelTimer();
+  updateTimerUI();
+  if (wo.status === 'in_progress') {
+    _timerInterval = setInterval(updateTimerUI, 30000);
+  }
+}
+
+function stopPanelTimer() {
+  if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
+}
+
+// ── WO DETAIL PANEL ───────────────────────────────────────────────────────────
+async function openWOPanel(id) {
+  currentWoId = id;
+  const wo = allWOs.find(w => w.id === id);
+  if (!wo) return;
+  document.getElementById('wp-title').textContent = wo.id;
+  const canAct   = canEdit() || isSupervisor();
+  const active   = !wo.archived;
+  const running  = wo.status === 'in_progress';
+  const isPaused = wo.status === 'paused';
+  const isDone   = wo.status === 'completed';
+  document.getElementById('wp-start-btn').style.display   = (canAct && active && wo.status === 'planned') ? '' : 'none';
+  document.getElementById('wp-done-btn').style.display    = (canAct && active && !isDone)                 ? '' : 'none';
+  document.getElementById('wp-pause-btn').style.display   = (canAct && active && running)                 ? '' : 'none';
+  document.getElementById('wp-resume-btn').style.display  = (canAct && active && isPaused)                ? '' : 'none';
+  document.getElementById('wp-edit-btn').style.display    = (canAct && active && !isDone)                 ? '' : 'none';
+  document.getElementById('wp-archive-btn').style.display = (canAct && isDone && active)                  ? '' : 'none';
+  document.getElementById('wp-del-btn').style.display     = (canEdit() || isSupervisor())                 ? '' : 'none';
+
+  let logs = [], pauseLogs = [];
+  try { logs = await dbGetShiftLogs(id); } catch(e) {}
+  try { pauseLogs = await dbGetPauseLogs(id); } catch(e) {}
+
+  document.getElementById('wp-body').innerHTML = buildWODetailHtml(wo, logs, pauseLogs);
+  document.getElementById('wo-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+  if (wo.started_at) startPanelTimer(wo);
+}
+function closeWOPanel() {
+  stopPanelTimer();
+  currentWoId = null;
+  document.getElementById('wo-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function buildWODetailHtml(wo, logs, pauseLogs = []) {
+  const p       = productById(wo.product_id);
+  const m       = machineById(wo.machine_id);
+  const sec     = woSector(wo);
+  const colours = parseColours(wo.colours_json);
+  const produced = logs.reduce((a, l) => a + (l.day_production||0) + (l.night_production||0), 0);
+  const total    = wo.total_qty || 0;
+  const pp       = pct(produced, total);
+
+  let h = '';
+
+  // Timer strip (only when active/started)
+  if (wo.started_at && (wo.status === 'in_progress' || wo.status === 'paused' || wo.status === 'completed')) {
+    const startMs   = new Date(wo.started_at).getTime();
+    const endMs     = wo.completed_at ? new Date(wo.completed_at).getTime() : Date.now();
+    const elapsed   = endMs - startMs;
+    const elapsedH  = elapsed / 3_600_000;
+    const plannedH  = parseFloat(wo.planned_runtime_hours) || 0;
+    const fmtH = ms => { const h = Math.floor(ms/3_600_000), m = Math.floor((ms%3_600_000)/60000); return `${h}h ${m}m`; };
+    const fmtDT = d => new Date(d).toLocaleString('en-GB', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    let timerEl = `<div class="timer-strip">
+      <div><div class="ts-lbl">Started</div><div class="ts-val">${fmtDT(wo.started_at)}</div></div>`;
+    if (plannedH) {
+      const expectedEndMs = startMs + plannedH * 3_600_000;
+      const diff    = endMs - expectedEndMs;
+      const isOver  = diff > 0;
+      const label   = wo.status === 'completed' ? (isOver ? 'Ran over by' : 'Finished early by') : (isOver ? 'Overdue by' : 'Remaining');
+      const diffAbs = Math.abs(diff);
+      timerEl += `<div><div class="ts-lbl">Planned</div><div class="ts-val">${plannedH}h</div></div>
+      <div><div class="ts-lbl">Elapsed</div><div class="ts-val" id="ts-elapsed">${fmtH(elapsed)}</div></div>
+      <div><div class="ts-lbl" id="ts-diff-lbl">${label}</div><div class="ts-val ${isOver ? 'ts-over' : 'ts-ok'}" id="ts-diff">${fmtH(diffAbs)}</div></div>`;
+    } else {
+      timerEl += `<div><div class="ts-lbl">Elapsed</div><div class="ts-val" id="ts-elapsed">${fmtH(elapsed)}</div></div>`;
+    }
+    if (wo.completed_at) timerEl += `<div><div class="ts-lbl">Completed</div><div class="ts-val">${fmtDT(wo.completed_at)}</div></div>`;
+    timerEl += '</div>';
+    h += timerEl;
+    if (plannedH && wo.status !== 'completed') {
+      const timePct  = Math.min(100, Math.round((elapsed / (plannedH * 3_600_000)) * 100));
+      const timeOver = elapsed > plannedH * 3_600_000;
+      h += `<div style="margin-bottom:.65rem">
+        <div style="display:flex;justify-content:space-between;font-size:.67rem;color:var(--muted);margin-bottom:.22rem">
+          <span>Time elapsed vs planned</span>
+          <span id="time-prog-pct">${timePct}%${timeOver ? ' (over)' : ''}</span>
+        </div>
+        <div class="prog-bar" style="height:6px">
+          <div id="time-prog-fill" class="prog-fill" style="width:${timePct}%;background:${timeOver ? '#dc2626' : timePct > 90 ? '#f59e0b' : 'var(--accent2)'}"></div>
+        </div>
+      </div>`;
+    }
+  }
+
+  // Overrun / early notes if captured
+  if (wo.overtime_reason) {
+    h += `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:.45rem .7rem;font-size:.77rem;margin-bottom:.65rem">
+      <strong style="color:#dc2626">Overrun noted:</strong> ${esc(wo.overtime_reason)}</div>`;
+  }
+  if (wo.early_completion_notes) {
+    h += `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:.45rem .7rem;font-size:.77rem;margin-bottom:.65rem">
+      <strong style="color:var(--green)">Early completion:</strong> ${esc(wo.early_completion_notes)}</div>`;
+  }
+
+  // Overview
+  h += `<div class="wp-sec">
+    <div class="wp-sec-hdr">Overview</div>
+    <div class="wp-g2" style="margin-bottom:.7rem">
+      <div class="wp-kv"><label>Product</label><div class="v">${esc(p?.en || wo.product_id)}</div></div>
+      <div class="wp-kv"><label>Status</label><div class="v"><span class="st st-${wo.status}">${wo.status.replace('_',' ')}</span>${wo.archived?' <span style="font-size:.58rem;color:var(--muted)">(archived)</span>':''}</div></div>
+      ${wo.mould_name ? `<div class="wp-kv"><label>Mould / component</label><div class="v">${esc(wo.mould_name)}</div></div>` : ''}
+      <div class="wp-kv"><label>Machine</label><div class="v"><span class="sec-chip sec-${sec.toLowerCase()}">${sec}</span> ${esc(m?.name||'—')}</div></div>
+      <div class="wp-kv"><label>Created</label><div class="v">${fmtDate(wo.created_at)}</div></div>
+      ${wo.due_date ? `<div class="wp-kv"><label>Due date</label><div class="v">${fmtDate(wo.due_date)}</div></div>` : ''}
+      ${wo.mould_in_at  ? `<div class="wp-kv"><label>Mould in</label><div class="v">${fmtDate(wo.mould_in_at)}</div></div>` : ''}
+      ${wo.mould_out_at ? `<div class="wp-kv"><label>Mould out</label><div class="v">${fmtDate(wo.mould_out_at)}</div></div>` : ''}
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:.73rem;margin-bottom:.25rem">
+      <span>Progress: <strong>${produced.toLocaleString()}</strong> / ${total.toLocaleString()} pcs (${pp}%)</span>
+      <span style="color:var(--muted)">${Math.max(0,total-produced).toLocaleString()} remaining</span>
+    </div>
+    <div class="prog-bar" style="height:8px"><div class="prog-fill${wo.status==='completed'?' done':''}" style="width:${pp}%"></div></div>
+  </div>`;
+
+  // Parameters
+  h += `<div class="wp-sec">
+    <div class="wp-sec-hdr">Production parameters</div>
+    <div class="wp-g3">
+      <div class="wp-kv"><label>Weight / piece</label><div class="v mono hi">${wo.weight_per_piece_g ? wo.weight_per_piece_g + ' g' : '—'}</div></div>
+      <div class="wp-kv"><label>Cycle time</label><div class="v mono">${wo.cycle_time_s || '—'} s</div></div>
+      <div class="wp-kv"><label>Cooling time</label><div class="v mono">${wo.cooling_time_s ?? '—'} s</div></div>
+      <div class="wp-kv"><label>Pieces / cycle</label><div class="v mono">${wo.pieces_per_cycle || 1}</div></div>
+      <div class="wp-kv"><label>Est. runtime</label><div class="v mono">${wo.planned_runtime_hours || '—'} h</div></div>
+      <div class="wp-kv"><label>Total bags</label><div class="v mono">${calcTotalBags(colours, wo.weight_per_piece_g)}</div></div>
+    </div>
+    ${wo.material_recipe ? `<div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)">Recipe: <span style="color:var(--text)">${esc(wo.material_recipe)}</span></div>` : ''}
+  </div>`;
+
+  // Colour table
+  if (colours.length) {
+    const totalQty  = calcTotalQty(colours);
+    const totalBags = calcTotalBags(colours, wo.weight_per_piece_g);
+    const totalDye  = Math.round(totalBags * DYE_RATIO * 100) / 100;
+    h += `<div class="wp-sec">
+      <div class="wp-sec-hdr">Colours & materials</div>
+      <table class="ctbl">
+        <thead><tr><th>Colour</th><th>Units</th><th>Bags (25kg)</th><th>Dye (kg)</th></tr></thead>
+        <tbody>
+          ${colours.map(c => {
+            const bags = calcBags(wo.weight_per_piece_g, parseInt(c.units)||0);
+            return `<tr><td>${esc(c.name)}</td><td>${(parseInt(c.units)||0).toLocaleString()}</td><td>${bags}</td><td>${calcDye(bags)}</td></tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr><td>Total</td><td>${totalQty.toLocaleString()}</td><td>${totalBags}</td><td>${totalDye}</td></tr></tfoot>
+      </table>
+    </div>`;
+  }
+
+  // Shift log
+  h += `<div class="wp-sec">
+    <div class="wp-sec-hdr">Daily production log
+      <button class="ph-btn" onclick="openLogModal()" style="font-size:.65rem;padding:.18rem .45rem">+ Add entry</button>
+    </div>`;
+  if (logs.length) {
+    const dTot = logs.reduce((a,l) => a+(l.day_production||0),0);
+    const nTot = logs.reduce((a,l) => a+(l.night_production||0),0);
+    const dWaste = logs.reduce((a,l) => a+(l.day_waste||0),0);
+    const nWaste = logs.reduce((a,l) => a+(l.night_waste||0),0);
+    h += `<table class="ltbl">
+      <thead><tr>
+        <th>Date</th>
+        <th style="color:var(--accent2)">☀ Prod</th><th style="color:var(--accent2)">☀ Waste</th><th style="color:var(--accent2)">☀ Worker</th>
+        <th style="color:#6366f1">🌙 Prod</th><th style="color:#6366f1">🌙 Waste</th><th style="color:#6366f1">🌙 Worker</th>
+        <th>Notes</th>
+      </tr></thead>
+      <tbody>
+        ${logs.map(l => `<tr>
+          <td>${l.log_date}</td>
+          <td>${l.day_production||0}</td><td>${l.day_waste||0}</td><td style="font-size:.66rem">${esc(l.day_worker||'—')}</td>
+          <td>${l.night_production||0}</td><td>${l.night_waste||0}</td><td style="font-size:.66rem">${esc(l.night_worker||'—')}</td>
+          <td style="font-size:.66rem;text-align:left">${esc(l.notes||'')}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td>Total</td>
+        <td>${dTot}</td><td>${dWaste}</td><td></td>
+        <td>${nTot}</td><td>${nWaste}</td><td></td><td></td>
+      </tr></tfoot>
+    </table>`;
+  } else {
+    h += '<p style="color:var(--muted);font-size:.78rem;margin-top:.3rem">No production logged yet.</p>';
+  }
+  h += '</div>';
+
+  if (wo.notes) h += `<div class="wp-sec"><div class="wp-sec-hdr">Notes</div><p style="font-size:.8rem">${esc(wo.notes)}</p></div>`;
+
+  // Pause history
+  if (pauseLogs.length) {
+    const fmtDT = d => new Date(d).toLocaleString('en-GB', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    h += `<div class="wp-sec"><div class="wp-sec-hdr">Pause history (${pauseLogs.length})</div>
+      <table class="ltbl"><thead><tr><th>Paused at</th><th>Reason</th><th>Resumed at</th><th>Duration</th></tr></thead><tbody>
+      ${pauseLogs.map(pl => {
+        const dur = pl.resumed_at ? Math.round((new Date(pl.resumed_at)-new Date(pl.paused_at))/60000) + ' min' : '—';
+        const reason = pl.reason === 'Other' && pl.reason_other ? `Other: ${pl.reason_other}` : pl.reason;
+        return `<tr><td>${fmtDT(pl.paused_at)}</td><td style="text-align:left">${esc(reason)}</td><td>${pl.resumed_at?fmtDT(pl.resumed_at):'In pause'}</td><td>${dur}</td></tr>`;
+      }).join('')}
+      </tbody></table></div>`;
+  }
+
+  return h;
+}
+
+async function startWO() {
+  if (!currentWoId) return;
+  const wo = allWOs.find(w => w.id === currentWoId);
+  if (!wo) return;
+  // Machine lock — block if this machine already has an in_progress WO
+  const conflict = allWOs.find(w => w.machine_id === wo.machine_id && w.status === 'in_progress' && w.id !== wo.id);
+  if (conflict) {
+    showToast(`Machine is already running ${conflict.id} — complete or pause that order first`, 'error');
+    return;
+  }
+  setSyncStatus('saving', 'Saving…');
+  try {
+    const now = new Date().toISOString();
+    await dbUpdateWorkOrder(currentWoId, { status: 'in_progress', started_at: now });
+    wo.status = 'in_progress'; wo.started_at = now;
+    setSyncStatus('ok', 'Saved ✓');
+    showToast('Work order started');
+    await openWOPanel(currentWoId);
+    renderWOGrid(); updateCounts();
+  } catch(e) { setSyncStatus('error', 'Error'); showToast(e.message, 'error'); }
+}
+
+async function completeWO() {
+  if (!currentWoId) return;
+  const wo = allWOs.find(w => w.id === currentWoId);
+  if (!wo) return;
+
+  // Determine if overrun or early, but only if we have both started_at and planned_runtime_hours
+  if (wo.started_at && wo.planned_runtime_hours) {
+    const elapsedH = (Date.now() - new Date(wo.started_at).getTime()) / 3_600_000;
+    const plannedH = parseFloat(wo.planned_runtime_hours);
+    const overrunFrac = (elapsedH - plannedH) / plannedH;
+
+    if (overrunFrac > 0.05) {
+      // Overrun: ask if intentional
+      const elH = Math.floor(elapsedH), elM = Math.floor((elapsedH % 1) * 60);
+      document.getElementById('overrun-msg').textContent =
+        `This order ran for ${elH}h ${elM}m (planned: ${plannedH}h — ${Math.round(overrunFrac*100)}% over).`;
+      document.getElementById('overrun-reason').style.display = 'none';
+      document.getElementById('overrun-err').style.display = 'none';
+      document.querySelectorAll('input[name="overrun-choice"]').forEach(r => r.checked = false);
+      document.getElementById('overrun-yes').onchange = () => { document.getElementById('overrun-reason').style.display = ''; };
+      document.getElementById('overrun-no').onchange  = () => { document.getElementById('overrun-reason').style.display = 'none'; };
+      _pendingCompleteData = {};
+      document.getElementById('overrun-overlay').classList.add('open');
+      return;
+    } else if (overrunFrac < -0.10) {
+      // Early: capture a note
+      const earlyH = Math.abs(elapsedH - plannedH);
+      const ehH = Math.floor(earlyH), ehM = Math.floor((earlyH % 1) * 60);
+      document.getElementById('early-msg').textContent =
+        `This order completed ${ehH}h ${ehM}m ahead of the planned ${plannedH}h. Please note why.`;
+      document.getElementById('early-reason').value = '';
+      document.getElementById('early-err').style.display = 'none';
+      _pendingCompleteData = {};
+      document.getElementById('early-overlay').classList.add('open');
+      return;
+    }
+  }
+
+  // Normal completion — no modal needed
+  _pendingCompleteData = {};
+  await confirmComplete();
+}
+
+async function confirmComplete() {
+  if (!currentWoId) return;
+
+  // Gather any modal inputs
+  const overrunEl = document.getElementById('overrun-overlay');
+  const earlyEl   = document.getElementById('early-overlay');
+
+  if (overrunEl.classList.contains('open')) {
+    const choice = document.querySelector('input[name="overrun-choice"]:checked')?.value;
+    if (!choice) { document.getElementById('overrun-err').textContent = 'Please select Yes or No.'; document.getElementById('overrun-err').style.display = ''; return; }
+    if (choice === 'yes') {
+      const reason = document.getElementById('overrun-reason').value.trim();
+      if (!reason) { document.getElementById('overrun-err').textContent = 'Please describe the reason for the overrun.'; document.getElementById('overrun-err').style.display = ''; return; }
+      _pendingCompleteData.overtime_reason = reason;
+    }
+    overrunEl.classList.remove('open');
+  }
+
+  if (earlyEl.classList.contains('open')) {
+    const reason = document.getElementById('early-reason').value.trim();
+    if (!reason) { document.getElementById('early-err').textContent = 'Please enter a reason.'; document.getElementById('early-err').style.display = ''; return; }
+    _pendingCompleteData.early_completion_notes = reason;
+    earlyEl.classList.remove('open');
+  }
+
+  setSyncStatus('saving', 'Saving…');
+  try {
+    const patch = { status: 'completed', completed_at: new Date().toISOString(), ..._pendingCompleteData };
+    await dbUpdateWorkOrder(currentWoId, patch);
+    const wo = allWOs.find(w => w.id === currentWoId);
+    if (wo) Object.assign(wo, patch);
+    _pendingCompleteData = null;
+    setSyncStatus('ok', 'Saved ✓');
+    showToast('Work order completed');
+    await openWOPanel(currentWoId);
+    renderWOGrid(); updateCounts();
+  } catch(e) { setSyncStatus('error', 'Error'); showToast(e.message, 'error'); }
+}
+
+// ── PAUSE / RESUME ────────────────────────────────────────────────────────────
+function openPauseModal() {
+  document.querySelectorAll('input[name="pause-reason"]').forEach(r => r.checked = false);
+  document.getElementById('pause-other-wrap').style.display = 'none';
+  document.getElementById('pause-other-text').value = '';
+  document.getElementById('pause-err').style.display = 'none';
+  document.querySelectorAll('.pause-reason-opt').forEach(l => l.classList.remove('selected'));
+  document.getElementById('pause-overlay').classList.add('open');
+}
+function closePauseModal() { document.getElementById('pause-overlay').classList.remove('open'); }
+
+async function confirmPause() {
+  const reason = document.querySelector('input[name="pause-reason"]:checked')?.value;
+  if (!reason) { document.getElementById('pause-err').textContent = 'Select a reason.'; document.getElementById('pause-err').style.display = ''; return; }
+  let reasonOther = '';
+  if (reason === 'Other') {
+    reasonOther = document.getElementById('pause-other-text').value.trim();
+    if (!reasonOther) { document.getElementById('pause-err').textContent = 'Describe the reason for Other.'; document.getElementById('pause-err').style.display = ''; return; }
+  }
+  closePauseModal();
+  setSyncStatus('saving', 'Saving…');
+  try {
+    await dbUpdateWorkOrder(currentWoId, { status: 'paused' });
+    await dbCreatePauseLog({ order_id: currentWoId, paused_at: new Date().toISOString(), reason, reason_other: reasonOther || null, paused_by: SESSION?.username || null });
+    const wo = allWOs.find(w => w.id === currentWoId);
+    if (wo) wo.status = 'paused';
+    setSyncStatus('ok', 'Saved ✓');
+    showToast('Order paused — ' + reason);
+    await openWOPanel(currentWoId);
+    renderWOGrid(); updateCounts();
+  } catch(e) { setSyncStatus('error', 'Error'); showToast(e.message, 'error'); }
+}
+
+async function resumeWO() {
+  if (!currentWoId) return;
+  // Machine lock — block if machine has another in_progress WO
+  const wo = allWOs.find(w => w.id === currentWoId);
+  const conflict = allWOs.find(w => w.machine_id === wo?.machine_id && w.status === 'in_progress' && w.id !== currentWoId);
+  if (conflict) { showToast(`Machine is running ${conflict.id} — cannot resume until that order is done or paused`, 'error'); return; }
+  setSyncStatus('saving', 'Saving…');
+  try {
+    // Close the open pause log (most recent with no resumed_at)
+    const pauseLogs = await dbGetPauseLogs(currentWoId);
+    const openLog   = [...(pauseLogs||[])].reverse().find(l => !l.resumed_at);
+    if (openLog) await dbResumePauseLog(openLog.id);
+    await dbUpdateWorkOrder(currentWoId, { status: 'in_progress' });
+    if (wo) wo.status = 'in_progress';
+    setSyncStatus('ok', 'Saved ✓');
+    showToast('Order resumed');
+    await openWOPanel(currentWoId);
+    renderWOGrid(); updateCounts();
+  } catch(e) { setSyncStatus('error', 'Error'); showToast(e.message, 'error'); }
+}
+
+// ── ARCHIVE ───────────────────────────────────────────────────────────────────
+async function archiveWO() {
+  if (!currentWoId) return;
+  const wo = allWOs.find(w => w.id === currentWoId);
+  if (!confirm(`Archive "${wo?.id}"? It will move to the Archive view.`)) return;
+  setSyncStatus('saving', 'Saving…');
+  try {
+    await dbUpdateWorkOrder(currentWoId, { archived: true });
+    if (wo) wo.archived = true;
+    setSyncStatus('ok', 'Saved ✓');
+    showToast('Order archived');
+    closeWOPanel();
+    renderWOGrid(); updateCounts();
+  } catch(e) { setSyncStatus('error', 'Error'); showToast(e.message, 'error'); }
+}
+
+async function deleteWO() {
+  if (!currentWoId) return;
+  const wo = allWOs.find(w => w.id === currentWoId);
+  if (!confirm(`Delete work order "${wo?.id}"?\n\nThis will also delete all shift log entries for this order. This cannot be undone.`)) return;
+  setSyncStatus('saving', 'Deleting…');
+  try {
+    await SB.fetch(`/shift_logs?order_id=eq.${encodeURIComponent(currentWoId)}`, { method: 'DELETE' });
+    await dbDeleteWorkOrder(currentWoId);
+    allWOs = allWOs.filter(w => w.id !== currentWoId);
+    closeWOPanel();
+    setSyncStatus('ok', 'Deleted');
+    showToast('Work order deleted');
+    renderWOGrid(); updateCounts();
+  } catch(e) { setSyncStatus('error', 'Error'); showToast(e.message, 'error'); }
+}
+
+// ── LOG ENTRY ─────────────────────────────────────────────────────────────────
+function openLogModal() {
+  if (!currentWoId) return;
+  const wo = allWOs.find(w => w.id === currentWoId);
+  document.getElementById('log-date').value         = new Date().toISOString().slice(0,10);
+  document.getElementById('log-day-worker').value   = wo?.day_worker   || '';
+  document.getElementById('log-night-worker').value = wo?.night_worker || '';
+  document.getElementById('log-day-prod').value   = '';
+  document.getElementById('log-day-waste').value  = '';
+  document.getElementById('log-night-prod').value  = '';
+  document.getElementById('log-night-waste').value = '';
+  document.getElementById('log-notes').value = '';
+  document.getElementById('log-summary').textContent = '';
+  document.getElementById('log-overlay').classList.add('open');
+}
+function closeLogModal() { document.getElementById('log-overlay').classList.remove('open'); }
+
+async function saveLogEntry() {
+  const logDate = document.getElementById('log-date').value;
+  if (!logDate || !currentWoId) { showToast('Date required', 'error'); return; }
+  const dayProd   = parseInt(document.getElementById('log-day-prod').value)   || 0;
+  const nightProd = parseInt(document.getElementById('log-night-prod').value) || 0;
+  const entry = {
+    day_production:   dayProd,
+    day_waste:        parseInt(document.getElementById('log-day-waste').value)   || 0,
+    day_worker:       document.getElementById('log-day-worker').value.trim()   || null,
+    night_production: nightProd,
+    night_waste:      parseInt(document.getElementById('log-night-waste').value) || 0,
+    night_worker:     document.getElementById('log-night-worker').value.trim() || null,
+    notes:            document.getElementById('log-notes').value.trim()         || null,
+  };
+  try {
+    setSyncStatus('saving', 'Saving…');
+    await dbUpsertShiftLog(currentWoId, logDate, entry);
+
+    // Recalculate produced_qty and auto-update status
+    const logs = await dbGetShiftLogs(currentWoId);
+    const produced = logs.reduce((a, l) => a + (l.day_production||0) + (l.night_production||0), 0);
+    const wo = allWOs.find(w => w.id === currentWoId);
+    const total = wo?.total_qty || 0;
+    const newStatus = produced >= total && total > 0 ? 'completed'
+                    : produced > 0 ? 'in_progress'
+                    : 'planned';
+    await dbUpdateWorkOrder(currentWoId, { produced_qty: produced, status: newStatus });
+    if (wo) { wo.produced_qty = produced; wo.status = newStatus; }
+
+    setSyncStatus('ok', 'Saved ✓');
+    showToast('Log entry saved' + (newStatus === 'completed' ? ' — Order completed! 🎉' : ''));
+    closeLogModal();
+    await openWOPanel(currentWoId);
+    renderWOGrid(); updateCounts();
+  } catch(e) { setSyncStatus('error', 'Error'); showToast(e.message, 'error'); }
+}
+
+// ── WIZARD ────────────────────────────────────────────────────────────────────
+function openWizard(preloadPid) {
+  editingWoId = null;
+  wizardStep  = 1;
+  wizardData  = {
+    productId: null, productName: '', productNameAr: '',
+    bom: [], mouldIdx: null, lastWo: null,
+    weightG: '', cycleS: '', coolingS: '', ppc: 1,
+    colours: [{ name: '', units: '' }],
+    machineId: null, dueDate: '', notes: '',
+    moulds_in_at: '', mould_out_at: '', material_recipe: '', bomRecipes: [],
+  };
+  document.getElementById('wiz-title').textContent = 'New Work Order';
+  document.getElementById('wiz-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+  renderWizardStep();
+  if (preloadPid) setTimeout(() => selectProduct(preloadPid), 50);
+}
+
+function openWizardEdit() {
+  if (!currentWoId) return;
+  const wo = allWOs.find(w => w.id === currentWoId);
+  if (!wo) return;
+  editingWoId = currentWoId;
+  const p = productById(wo.product_id);
+  const colours = parseColours(wo.colours_json);
+  wizardStep = 1;
+  wizardData = {
+    productId: wo.product_id, productName: p?.en || '', productNameAr: p?.name_ar || '',
+    bom: getOv(wo.product_id).bom_json || [], mouldIdx: null, lastWo: null, bomRecipes: [],
+    weightG: wo.weight_per_piece_g || '', cycleS: wo.cycle_time_s || '',
+    coolingS: wo.cooling_time_s ?? '', ppc: wo.pieces_per_cycle || 1,
+    colours: colours.length ? colours : [{ name: '', units: '' }],
+    machineId: wo.machine_id, dueDate: wo.due_date || '',
+    notes: wo.notes || '', mouldName: wo.mould_name || '',
+    mould_in_at: wo.mould_in_at ? wo.mould_in_at.slice(0,10) : '',
+    mould_out_at: wo.mould_out_at ? wo.mould_out_at.slice(0,10) : '',
+    material_recipe: wo.material_recipe || '',
+  };
+  document.getElementById('wiz-title').textContent = 'Edit Work Order';
+  document.getElementById('wiz-panel').classList.add('open');
+  renderWizardStep();
+}
+
+function closeWizard() {
+  document.getElementById('wiz-panel').classList.remove('open');
+  if (!currentWoId) document.getElementById('overlay').classList.remove('open');
+  editingWoId = null;
+}
+
+function renderWizardStep() {
+  // Step indicator
+  const steps = ['Product & Mould', 'Parameters & Colours', 'Machine & Schedule'];
+  document.getElementById('wiz-steps').innerHTML = steps.map((label, i) => {
+    const n = i + 1;
+    const cls = n < wizardStep ? 'done' : n === wizardStep ? 'active' : '';
+    return `<div class="wiz-step ${cls}"><span class="wsn">${n < wizardStep ? '✓' : n}</span>${label}</div>
+            ${n < steps.length ? '<div class="wsl"></div>' : ''}`;
+  }).join('');
+
+  if (wizardStep === 1) renderS1();
+  else if (wizardStep === 2) renderS2();
+  else renderS3();
+}
+
+// ── STEP 1: Product & Mould ───────────────────────────────────────────────────
+function renderS1() {
+  const bom   = wizardData.bom || [];
+  const lastWo = wizardData.lastWo;
+
+  let h = `<div class="f-sec">
+    <div class="f-sec-hdr">Select product</div>
+    <div class="f-field psearch-wrap">
+      <label class="f-lbl">Product name</label>
+      <input class="f-in" id="s1-prod-search" placeholder="Search by name or Arabic name…"
+        value="${esc(wizardData.productName)}" oninput="onProdSearch(this.value)" autocomplete="off">
+      <input type="hidden" id="s1-prod-id" value="${esc(String(wizardData.productId||''))}">
+      <div class="psearch-dd" id="prod-dd" style="display:none"></div>
+    </div>
+  </div>`;
+
+  if (lastWo) {
+    const m = machineById(lastWo.machine_id);
+    h += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.45rem .7rem;font-size:.75rem;margin-bottom:.8rem;display:flex;align-items:center;gap:.65rem;cursor:pointer" onclick="openWOPanel('${esc(lastWo.id)}')">
+      <span style="font-size:.85rem">🕐</span>
+      <div>
+        <span style="color:var(--muted)">Last produced:</span>
+        <strong>${fmtDate(lastWo.created_at)}</strong>
+        ${m ? `· <span style="font-family:monospace;font-size:.72rem">${esc(m.name)}</span>` : ''}
+        · <span class="st st-${lastWo.status}" style="font-size:.58rem">${lastWo.status.replace('_',' ')}</span>
+        <span style="color:var(--muted);font-size:.68rem;margin-left:.4rem">${esc(lastWo.id)}</span>
+      </div>
+    </div>`;
+  }
+
+  if (wizardData.productId && bom.length > 0) {
+    h += `<div class="f-sec">
+      <div class="f-sec-hdr">Select mould / component to produce</div>
+      <div style="font-size:.78rem;margin-bottom:.65rem;padding:.4rem .65rem;background:var(--surface2);border-radius:7px;border:1px solid var(--border)">
+        Product: <strong>${esc(wizardData.productName)}</strong>${wizardData.productNameAr ? ` &nbsp;·&nbsp; <span style="direction:rtl">${esc(wizardData.productNameAr)}</span>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.35rem">
+        ${bom.map((row, i) => {
+          const selected  = wizardData.mouldIdx === i;
+          const lbl       = mouldLabel(row);
+          const tonLabel  = row.machines?.length ? row.machines.map(t => Math.round(parseFloat(t)) + 'T').join(' / ') : '';
+          const colLabel  = row.colours?.length  ? row.colours.length + ' colour' + (row.colours.length > 1 ? 's' : '') : '';
+          return `<div onclick="selectMould(${i})" style="padding:.65rem .8rem;border:1px solid ${selected?'var(--accent)':'var(--border)'};border-radius:9px;cursor:pointer;background:${selected?'rgba(201,76,40,.06)':'var(--surface)'}">
+            <div style="font-weight:700;font-size:.88rem;direction:rtl;text-align:right">${esc(lbl.primary || 'Component ' + (i+1))}</div>
+            ${lbl.secondary ? `<div style="font-size:.68rem;color:var(--muted);font-family:monospace;text-align:right">${esc(lbl.secondary)}</div>` : ''}
+            <div style="font-size:.68rem;color:var(--muted);margin-top:.22rem;display:flex;gap:.75rem;flex-wrap:wrap">
+              ${row.cycleTime   ? `<span>⏱ ${row.cycleTime}s cycle</span>`      : ''}
+              ${row.piecesCycle ? `<span>× ${row.piecesCycle} pcs/cycle</span>` : ''}
+              ${tonLabel        ? `<span>🏭 ${tonLabel}</span>`                  : ''}
+              ${colLabel        ? `<span>🎨 ${colLabel}</span>`                  : ''}
+            </div>
+          </div>`;
+        }).join('')}
+        <div onclick="selectMould(-1)" style="padding:.55rem .75rem;border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:.78rem;color:var(--muted)">
+          + Other / not listed above
+        </div>
+      </div>
+    </div>`;
+  } else if (wizardData.productId && bom.length === 0) {
+    h += `<div style="padding:.65rem .85rem;background:var(--amberbg);border:1px solid var(--amber);border-radius:8px;font-size:.78rem;color:var(--amber);margin-bottom:.8rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+      <div><strong>No BOM data yet.</strong> Add mould details in the Library first, then come back to create this work order.</div>
+      <a href="library.html?pid=${esc(String(wizardData.productId))}&bom=1" target="_blank" class="btn btn-primary" style="font-size:.72rem;padding:.3rem .65rem;white-space:nowrap;text-decoration:none">Open in Library →</a>
+    </div>`;
+  }
+
+  document.getElementById('wiz-body').innerHTML = h;
+  document.getElementById('wiz-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeWizard()">Cancel</button>
+    <button class="btn btn-primary" onclick="nextStep()" style="margin-left:auto">Next →</button>`;
+}
+
+function onProdSearch(q) {
+  const dd = document.getElementById('prod-dd');
+  if (!q || q.length < 1) { dd.style.display = 'none'; return; }
+  const ql = q.toLowerCase();
+  const hits = allProducts.filter(p =>
+    (p.en||'').toLowerCase().includes(ql) || (p.name_ar||'').includes(q)
+  ).slice(0, 12);
+  if (!hits.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = hits.map(p =>
+    `<div class="psearch-item" onclick="selectProduct('${esc(String(p.id))}')">
+      <div>
+        <span>${esc(p.en)}</span>
+        ${p.name_ar ? `<span class="psearch-ar"> (${esc(p.name_ar)})</span>` : ''}
+      </div>
+      <span class="psearch-cat">${esc(p.category)}</span>
+    </div>`
+  ).join('');
+  dd.style.display = 'block';
+}
+
+function selectProduct(pid) {
+  const p  = productById(pid);
+  const ov = getOv(pid);
+  wizardData.productId    = pid;
+  wizardData.productName  = p?.en || String(pid);
+  wizardData.productNameAr = p?.name_ar || '';
+  wizardData.bom          = ov.bom_json || [];
+  wizardData.mouldIdx     = wizardData.bom.length === 1 ? 0 : null;
+  wizardData.lastWo       = lastWOForProduct(pid);
+
+  // Auto-fill mould name if single BOM component
+  if (wizardData.mouldIdx === 0 && wizardData.bom[0]) {
+    const _lbl = mouldLabel(wizardData.bom[0]);
+    wizardData.mouldName = _lbl.primary || wizardData.bom[0].mouldName || '';
+  }
+
+  const input = document.getElementById('s1-prod-search');
+  if (input) input.value = wizardData.productName;
+  const hidInput = document.getElementById('s1-prod-id');
+  if (hidInput) hidInput.value = String(pid);
+  const dd = document.getElementById('prod-dd');
+  if (dd) dd.style.display = 'none';
+
+  renderS1();
+}
+
+function selectMould(idx) {
+  wizardData.mouldIdx = idx;
+  if (idx >= 0 && wizardData.bom[idx]) {
+    const row = wizardData.bom[idx];
+    const _lbl = mouldLabel(row);
+    wizardData.mouldName = _lbl.primary || row.mouldName || '';
+    if (!wizardData.cycleS  && row.cycleTime)   wizardData.cycleS  = row.cycleTime;
+    if (!wizardData.ppc     && row.piecesCycle)  wizardData.ppc     = row.piecesCycle;
+    if (!wizardData.weightG && row.partWeight)   wizardData.weightG = Math.round(parseFloat(row.partWeight) * 1000);
+    wizardData.bomRecipes = normBomRecipes(row);
+    // Pre-fill colour rows from BOM — names populated, quantities left blank for user to fill
+    if (row.colours?.length) {
+      wizardData.colours = row.colours.map(c => ({ name: c, units: '' }));
+    }
+    wizardData.bomMachines = row.machines || [];
+  } else {
+    wizardData.mouldName   = '';
+    wizardData.bomMachines = [];
+    wizardData.bomRecipes  = [];
+    wizardData.colours     = [{ name: '', units: '' }];
+  }
+  renderS1();
+}
+
+
+// ── STEP 2: Parameters & Colours ─────────────────────────────────────────────
+function renderS2() {
+  const colours = wizardData.colours || [{ name: '', units: '' }];
+
+  let h = `<div class="f-sec">
+    <div class="f-sec-hdr">Weight per piece <span style="font-weight:400;font-size:.7rem">(drives all bag & dye calculations)</span></div>
+    <div class="f-g4">
+      <div class="f-field">
+        <label class="f-lbl">Weight (g) ★</label>
+        <input class="f-in" type="number" id="s2-weight" value="${esc(String(wizardData.weightG||''))}" placeholder="e.g. 420" oninput="recalcS2()">
+      </div>
+      <div class="f-field"><label class="f-lbl">Cycle time (s)</label><input class="f-in" type="number" id="s2-cycle" value="${esc(String(wizardData.cycleS||''))}" placeholder="e.g. 35" oninput="recalcS2()"></div>
+      <div class="f-field"><label class="f-lbl">Cooling (s)</label><input class="f-in" type="number" id="s2-cooling" value="${esc(String(wizardData.coolingS||''))}" placeholder="0"></div>
+      <div class="f-field"><label class="f-lbl">Pcs / cycle</label><input class="f-in" type="number" id="s2-ppc" value="${esc(String(wizardData.ppc||1))}" min="1" oninput="recalcS2()"></div>
+    </div>
+    <div class="f-g2" style="margin-top:.55rem">
+      <div class="f-field"><label class="f-lbl">Est. runtime</label><div class="f-calc" id="s2-hours">—</div></div>
+      <div class="f-field"><label class="f-lbl">Total bags</label><div class="f-calc" id="s2-totbags">—</div></div>
+    </div>
+  </div>
+
+  <div class="f-sec">
+    <div class="f-sec-hdr" style="display:flex;justify-content:space-between;align-items:center">
+      Colours & quantities
+      <button type="button" class="ph-btn" onclick="addColourRow()" style="font-size:.65rem;padding:.18rem .42rem">+ Colour</button>
+    </div>
+    <div class="cr-hdr"><span>Colour name / code</span><span style="text-align:center">Units</span><span style="text-align:center">Bags</span><span style="text-align:center">Dye (kg)</span><span></span></div>
+    <div id="s2-colour-rows">
+      ${colours.map((c, i) => colourRowHtml(c, i)).join('')}
+    </div>
+    <div class="cr-totals" id="s2-totals"></div>
+  </div>
+
+  <div class="f-sec">
+    <div class="f-sec-hdr">Material recipe</div>
+    ${(() => {
+      const recs = wizardData.bomRecipes || [];
+      if (recs.length === 0) {
+        return `<div class="f-field">
+          <label class="f-lbl">Recipe (free text)</label>
+          <input class="f-in" id="s2-recipe" value="${esc(wizardData.material_recipe||'')}" placeholder="e.g. PP Copolymer M44 ×3 + Homopolymer ×1">
+        </div>`;
+      }
+      if (recs.length === 1) {
+        const ratioStr = recs[0].ratios.map(r => esc(r.name) + (r.qty ? ' ×' + r.qty : '')).join(' + ');
+        return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:.5rem .7rem;font-size:.8rem">
+          <div style="font-weight:600;margin-bottom:.2rem">${esc(recs[0].name)}</div>
+          <div style="color:var(--muted)">${ratioStr}</div>
+        </div>
+        <input type="hidden" id="s2-recipe" value="${ratioStr}">`;
+      }
+      const cur = wizardData.material_recipe || '';
+      return `<div style="display:flex;flex-direction:column;gap:.3rem" id="s2-recipe-picker">
+        ${recs.map((rec, ri) => {
+          const ratioStr = rec.ratios.map(r => r.name + (r.qty ? ' ×' + r.qty : '')).join(' + ');
+          const checked  = cur === ratioStr || (!cur && ri === 0) ? 'checked' : '';
+          return `<label style="display:flex;align-items:flex-start;gap:.55rem;padding:.5rem .7rem;border:1px solid var(--border);border-radius:7px;cursor:pointer;${checked?'border-color:var(--accent);background:rgba(201,76,40,.05)':''}">
+            <input type="radio" name="s2-recipe-radio" value="${esc(ratioStr)}" ${checked} onchange="document.getElementById('s2-recipe').value=this.value;document.querySelectorAll('#s2-recipe-picker label').forEach(l=>l.style.borderColor='var(--border)');this.closest('label').style.borderColor='var(--accent)';" style="margin-top:.15rem;flex-shrink:0">
+            <div>
+              <div style="font-weight:600;font-size:.8rem">${esc(rec.name)}</div>
+              <div style="font-size:.72rem;color:var(--muted)">${esc(ratioStr)}</div>
+            </div>
+          </label>`;
+        }).join('')}
+      </div>
+      <input type="hidden" id="s2-recipe" value="${esc(recs[0].ratios.map(r => r.name + (r.qty ? ' ×' + r.qty : '')).join(' + '))}">`;
+    })()}
+  </div>
+
+  <div class="f-sec">
+    <div class="f-sec-hdr">Mould dates</div>
+    <div class="f-g2">
+      <div class="f-field">
+        <label class="f-lbl">Mould install date</label>
+        <input class="f-in" type="date" id="s2-mould-in" value="${esc(wizardData.mould_in_at||'')}" oninput="calcMouldOut()">
+      </div>
+      <div class="f-field">
+        <label class="f-lbl">Est. removal date <span style="font-weight:400;font-size:.6rem">(auto from runtime)</span></label>
+        <input class="f-in" type="date" id="s2-mould-out" value="${esc(wizardData.mould_out_at||'')}">
+      </div>
+    </div>
+    <div class="f-hint">Set install date — removal date is estimated from runtime hours. You can override it manually.</div>
+  </div>`;
+
+  document.getElementById('wiz-body').innerHTML = h;
+  document.getElementById('wiz-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="prevStep()">← Back</button>
+    <span id="s2-err" style="flex:1;font-size:.75rem;color:var(--red)"></span>
+    <button class="btn btn-primary" onclick="nextStep()">Next →</button>`;
+
+  recalcS2();
+}
+
+function colourRowHtml(c, i) {
+  return `<div class="cr-row" id="cr-${i}">
+    <input class="f-in" id="cr-name-${i}" value="${esc(c.name||'')}" placeholder="e.g. Red 560" oninput="recalcS2()">
+    <input class="f-in" type="number" id="cr-units-${i}" value="${c.units||''}" min="0" placeholder="500" oninput="recalcS2()" style="text-align:center">
+    <div class="cr-calc" id="cr-bags-${i}">—</div>
+    <div class="cr-calc" id="cr-dye-${i}">—</div>
+    <button class="del-btn" onclick="removeColourRow(${i})" title="Remove">✕</button>
+  </div>`;
+}
+
+function addColourRow() {
+  const rows = document.querySelectorAll('#s2-colour-rows .cr-row');
+  if (rows.length >= 9) { showToast('Max 9 colours per order'); return; }
+  const i   = rows.length;
+  const div = document.createElement('div');
+  div.innerHTML = colourRowHtml({}, i);
+  document.getElementById('s2-colour-rows').appendChild(div.firstElementChild);
+}
+
+function removeColourRow(i) {
+  const el = document.getElementById('cr-' + i);
+  if (el) { el.remove(); recalcS2(); }
+}
+
+function readColourRows() {
+  return [...document.querySelectorAll('#s2-colour-rows .cr-row')].map(row => {
+    const idx = row.id.replace('cr-', '');
+    return {
+      name:  (document.getElementById('cr-name-'  + idx)?.value || '').trim(),
+      units: parseInt(document.getElementById('cr-units-' + idx)?.value) || 0,
+    };
+  }).filter(c => c.name || c.units > 0);
+}
+
+function recalcS2() {
+  const weightG = parseInt(document.getElementById('s2-weight')?.value)  || 0;
+  const cycleS  = parseInt(document.getElementById('s2-cycle')?.value)   || 0;
+  const ppc     = parseInt(document.getElementById('s2-ppc')?.value)     || 1;
+
+  const rows = document.querySelectorAll('#s2-colour-rows .cr-row');
+  let totalQty = 0, totalBags = 0;
+
+  rows.forEach(row => {
+    const idx   = row.id.replace('cr-', '');
+    const units = parseInt(document.getElementById('cr-units-' + idx)?.value) || 0;
+    const bags  = calcBags(weightG, units);
+    const dye   = calcDye(bags);
+    const bagsEl = document.getElementById('cr-bags-' + idx);
+    const dyeEl  = document.getElementById('cr-dye-'  + idx);
+    if (bagsEl) bagsEl.textContent = bags || '—';
+    if (dyeEl)  dyeEl.textContent  = dye  || '—';
+    totalQty  += units;
+    totalBags += bags;
+  });
+
+  totalBags = Math.round(totalBags * 100) / 100;
+  const opHours = calcOpHours(cycleS, totalQty, ppc);
+
+  const hoursEl   = document.getElementById('s2-hours');
+  const totBagsEl = document.getElementById('s2-totbags');
+  const totalsEl  = document.getElementById('s2-totals');
+
+  if (hoursEl)   hoursEl.textContent   = opHours   ? opHours + ' h'   : '—';
+  if (totBagsEl) totBagsEl.textContent = totalBags  ? totalBags + ' bags' : '—';
+  if (totalsEl && totalQty) {
+    const totalDye = Math.round(totalBags * DYE_RATIO * 100) / 100;
+    totalsEl.innerHTML = `Total: <b>${totalQty.toLocaleString()} pcs</b> · <b>${totalBags} bags</b> · <b>${totalDye} kg dye</b>`;
+  } else if (totalsEl) {
+    totalsEl.innerHTML = '';
+  }
+  calcMouldOut();
+}
+
+function calcMouldOut() {
+  const inEl  = document.getElementById('s2-mould-in');
+  const outEl = document.getElementById('s2-mould-out');
+  if (!inEl || !outEl || !inEl.value) return;
+  const hoursEl = document.getElementById('s2-hours');
+  const hours = parseFloat(hoursEl?.textContent) || 0;
+  if (!hours) return;
+  const days = Math.ceil(hours / 24);
+  const d = new Date(inEl.value + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  outEl.value = d.toISOString().slice(0, 10);
+}
+
+// ── STEP 3: Machine & Schedule ────────────────────────────────────────────────
+function renderS3() {
+  const bomTonnages = (wizardData.bomMachines || []).map(t => parseFloat(t)).filter(t => !isNaN(t) && t > 0);
+  const hasTonFilter = bomTonnages.length > 0;
+
+  // Filter machines to BOM-specified tonnages; fall back to all if none match
+  const matchFn = m => bomTonnages.some(t => Math.abs(parseFloat(m.tonnage) - t) < 1);
+  let eligible = hasTonFilter ? allMachines.filter(matchFn) : allMachines;
+  const didFallback = hasTonFilter && eligible.length === 0;
+  if (didFallback) eligible = allMachines;
+
+  const grouped = { A: [], B: [], C: [] };
+  eligible.forEach(m => {
+    const s = m.sector || m.name?.[0] || 'A';
+    if (grouped[s]) grouped[s].push(m);
+  });
+
+  let machHtml = '';
+  ['A', 'B', 'C'].forEach(sec => {
+    if (!grouped[sec]?.length) return;
+    machHtml += `<div style="font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:.5rem 0 .28rem">${sec === 'A' ? '🔴' : sec === 'B' ? '🔵' : '🟢'} Sector ${sec}</div>`;
+    grouped[sec].forEach(m => {
+      const isSelected = wizardData.machineId === m.id;
+      const activeWOs  = activeWOsForMachine(m.id);
+      const curWO      = activeWOs.find(w => w.status === 'in_progress');
+      const nextWOs    = activeWOs.filter(w => w.status === 'planned');
+      let queueNote = '';
+      if (curWO)            queueNote = 'Running: ' + (productById(curWO.product_id)?.en || curWO.id);
+      else if (nextWOs.length) queueNote = nextWOs.length + ' queued';
+      else                  queueNote = 'Idle';
+
+      machHtml += `<div class="mach-item ${isSelected?'selected':''}" onclick="selectMachine('${esc(m.id)}')">
+        <span class="mach-name">${esc(m.name)}</span>
+        <span class="mach-ton">${m.tonnage}T</span>
+        <span class="mach-queue">${esc(queueNote)}</span>
+      </div>`;
+    });
+  });
+
+  const tonLabel = bomTonnages.map(t => Math.round(t) + 'T').join(' / ');
+  let h = `<div class="f-sec">
+    <div class="f-sec-hdr">Select machine${hasTonFilter ? ` <span style="font-weight:400;font-size:.68rem;color:var(--accent2)">— ${tonLabel} only (from BOM)</span>` : ''}</div>
+    ${didFallback ? `<div style="padding:.38rem .65rem;background:var(--amberbg);border:1px solid var(--amber);border-radius:7px;font-size:.75rem;color:var(--amber);margin-bottom:.5rem">No ${tonLabel} machines found — showing all machines.</div>` : ''}
+    <div class="mach-picker">${machHtml || '<p style="color:var(--muted);font-size:.8rem;padding:.5rem">No machines available.</p>'}</div>
+  </div>
+
+  <div class="f-sec">
+    <div class="f-sec-hdr">Schedule</div>
+    <div class="f-field" style="max-width:220px">
+      <label class="f-lbl">Due date</label>
+      <input class="f-in" type="date" id="s3-due" value="${esc(wizardData.dueDate||'')}">
+    </div>
+  </div>
+
+  <div class="f-sec">
+    <div class="f-sec-hdr">Notes</div>
+    <textarea class="f-in" id="s3-notes" rows="2" style="resize:vertical">${esc(wizardData.notes||'')}</textarea>
+  </div>`;
+
+  document.getElementById('wiz-body').innerHTML = h;
+  document.getElementById('wiz-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="prevStep()">← Back</button>
+    <span id="s3-err" style="flex:1;font-size:.75rem;color:var(--red)"></span>
+    <button class="btn btn-primary" onclick="submitWizard()">💾 ${editingWoId ? 'Save changes' : 'Create Work Order'}</button>`;
+}
+
+function selectMachine(id) {
+  wizardData.machineId = id;
+  renderS3();
+}
+
+// ── WIZARD NAVIGATION ─────────────────────────────────────────────────────────
+function nextStep() {
+  if (wizardStep === 1) {
+    const pid = document.getElementById('s1-prod-id')?.value || wizardData.productId;
+    if (!pid) { showToast('Select a product first', 'error'); return; }
+    wizardData.productId = pid;
+    wizardStep = 2;
+    renderWizardStep();
+  } else if (wizardStep === 2) {
+    const weightG = parseInt(document.getElementById('s2-weight')?.value) || 0;
+    if (!weightG) { document.getElementById('s2-err').textContent = 'Weight per piece is required.'; return; }
+    const colours = readColourRows();
+    const totalQty = calcTotalQty(colours);
+    if (!totalQty) { document.getElementById('s2-err').textContent = 'Add at least one colour with quantity > 0.'; return; }
+    // Save step 2 state
+    wizardData.weightG         = weightG;
+    wizardData.cycleS          = parseInt(document.getElementById('s2-cycle')?.value)   || '';
+    wizardData.coolingS        = parseInt(document.getElementById('s2-cooling')?.value) ?? '';
+    wizardData.ppc             = parseInt(document.getElementById('s2-ppc')?.value)     || 1;
+    wizardData.colours         = colours;
+    wizardData.material_recipe = document.getElementById('s2-recipe')?.value.trim()   || '';
+    wizardData.mould_in_at     = document.getElementById('s2-mould-in')?.value        || '';
+    wizardData.mould_out_at    = document.getElementById('s2-mould-out')?.value       || '';
+    wizardStep = 3;
+    renderWizardStep();
+  }
+}
+function prevStep() {
+  if (wizardStep > 1) { wizardStep--; renderWizardStep(); }
+}
+
+async function submitWizard() {
+  if (!wizardData.machineId) { document.getElementById('s3-err').textContent = 'Select a machine.'; return; }
+  wizardData.dueDate = document.getElementById('s3-due')?.value        || '';
+  wizardData.notes   = document.getElementById('s3-notes')?.value.trim() || '';
+
+  const colours  = wizardData.colours;
+  const totalQty = calcTotalQty(colours);
+  const opHours  = calcOpHours(wizardData.cycleS, totalQty, wizardData.ppc);
+
+  const data = {
+    product_id:           String(wizardData.productId),
+    machine_id:           wizardData.machineId,
+    mould_name:           wizardData.mouldName || null,
+    total_qty:            totalQty,
+    colours_json:         colours,
+    weight_per_piece_g:   wizardData.weightG  || null,
+    cycle_time_s:         wizardData.cycleS   || null,
+    cooling_time_s:       wizardData.coolingS !== '' ? parseInt(wizardData.coolingS) : null,
+    pieces_per_cycle:     wizardData.ppc      || 1,
+    planned_runtime_hours: opHours            || null,
+    material_recipe:      wizardData.material_recipe || null,
+    due_date:             wizardData.dueDate || null,
+    mould_in_at:          wizardData.mould_in_at  ? wizardData.mould_in_at + 'T00:00:00Z'  : null,
+    mould_out_at:         wizardData.mould_out_at ? wizardData.mould_out_at + 'T00:00:00Z' : null,
+    notes:                wizardData.notes || null,
+  };
+
+  setSyncStatus('saving', 'Saving…');
+  document.getElementById('s3-err').textContent = '';
+  try {
+    if (editingWoId) {
+      await dbUpdateWorkOrder(editingWoId, data);
+      const idx = allWOs.findIndex(w => w.id === editingWoId);
+      if (idx >= 0) Object.assign(allWOs[idx], data);
+      showToast('Work order updated');
+      closeWizard();
+      if (currentWoId === editingWoId) await openWOPanel(editingWoId);
+    } else {
+      const id = await genWoId();
+      data.id         = id;
+      data.status     = 'planned';
+      data.created_by = SESSION?.username || 'unknown';
+      data.produced_qty = 0;
+      const [created] = await dbCreateWorkOrder(data);
+      allWOs.unshift({ ...data, ...(created || {}), id });
+      showToast('Work order created: ' + id);
+      closeWizard();
+    }
+    setSyncStatus('ok', 'Saved ✓');
+    renderWOGrid(); updateCounts();
+  } catch(e) {
+    setSyncStatus('error', 'Save failed');
+    document.getElementById('s3-err').textContent = 'Error: ' + e.message;
+  }
+}
+
+async function genWoId() {
+  const d   = new Date();
+  const pfx = 'WO-' + d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  const cnt = allWOs.filter(w => w.id.startsWith(pfx)).length;
+  return pfx + '-' + String(cnt + 1).padStart(3, '0');
+}
+
+// ── FLOOR VIEW ────────────────────────────────────────────────────────────────
+function renderFloorView() {
+  const sectors = { A: [], B: [], C: [] };
+  allMachines.forEach(m => {
+    const s = m.sector || m.name?.[0];
+    if (sectors[s]) sectors[s].push(m);
+  });
+
+  let h = '';
+  ['A', 'B', 'C'].forEach(sec => {
+    if (floorSector && floorSector !== sec) return;
+    const machines = sectors[sec];
+    if (!machines?.length) return;
+    h += `<div class="floor-sector">
+      <div class="floor-sector-hdr"><span class="sec-chip sec-${sec.toLowerCase()}">${sec}</span> Sector ${sec} <span style="font-size:.7rem;color:var(--muted);font-weight:400">(${machines.length} machines)</span></div>
+      <div class="floor-rows">
+        ${machines.map(m => {
+          const activeWOs = activeWOsForMachine(m.id);
+          const curWO     = activeWOs.find(w => w.status === 'in_progress')
+                         || activeWOs.find(w => w.status === 'paused')
+                         || activeWOs.find(w => w.status === 'planned');
+          const queued    = activeWOs.filter(w => w !== curWO && w.status === 'planned');
+          const isIdle    = !curWO;
+          const produced  = curWO?.produced_qty || 0;
+          const total     = curWO?.total_qty    || 0;
+          const pp        = pct(produced, total);
+          const curP      = curWO ? productById(curWO.product_id) : null;
+          const nextP     = queued[0] ? productById(queued[0].product_id) : null;
+          return `<div class="frow ${isIdle?'idle':curWO?.status||''} ${curWO?'clickable':''}" ${curWO?`onclick="openWOPanel('${esc(curWO.id)}')"`:''}>
+            <div>
+              <div class="frow-mach">${esc(m.name)}</div>
+              <div class="frow-ton">${m.tonnage}T</div>
+            </div>
+            <div>
+              ${isIdle ? '<div style="font-size:.72rem;color:var(--muted);font-style:italic">Idle</div>' :
+              `<div class="frow-wo-name">${esc(curP?.en || curWO.id)}${curWO.mould_name?` · <em>${esc(curWO.mould_name)}</em>`:''}</div>
+              <div class="frow-wo-sub">
+                <span class="st st-${curWO.status}" style="font-size:.58rem">${curWO.status.replace('_',' ')}</span>
+                ${total?`<span style="margin-left:.4rem">${produced.toLocaleString()} / ${total.toLocaleString()} pcs (${pp}%)</span>`:''}
+              </div>
+              ${total ? `<div class="prog-bar" style="margin-top:.3rem"><div class="prog-fill${curWO.status==='completed'?' done':''}" style="width:${pp}%"></div></div>` : ''}`}
+            </div>
+            <div class="frow-next">
+              ${queued.length ? `<div><b>Next (${queued.length}):</b> ${esc(nextP?.en||queued[0].id)}</div>` : isIdle ? '' : '<div style="color:var(--muted)">No next order</div>'}
+              ${queued.length > 1 ? `<div style="font-size:.63rem;color:var(--muted)">+${queued.length-1} more queued</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('floor-content').innerHTML = h || '<p style="color:var(--muted);padding:1rem">No machines found.</p>';
+}
+
+// ── PRINT ─────────────────────────────────────────────────────────────────────
+async function openPrint() {
+  if (!currentWoId) return;
+  const wo = allWOs.find(w => w.id === currentWoId);
+  const p  = productById(wo.product_id);
+  const m  = machineById(wo.machine_id);
+  let logs = [];
+  try { logs = await dbGetShiftLogs(currentWoId); } catch(e) {}
+
+  const colours   = parseColours(wo.colours_json);
+  const totalQty  = calcTotalQty(colours);
+  const totalBags = calcTotalBags(colours, wo.weight_per_piece_g);
+  const totalDye  = Math.round(totalBags * DYE_RATIO * 100) / 100;
+  const opHours   = wo.planned_runtime_hours || calcOpHours(wo.cycle_time_s, totalQty, wo.pieces_per_cycle);
+  const today     = new Date().toLocaleDateString('ar-EG');
+  const fmtAr     = d => d ? new Date(d).toLocaleDateString('ar-EG') : '';
+  const e         = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const LOG_ROWS  = 10;
+
+  let colHdrs  = colours.map(c => `<th>${e(c.name)}</th>`).join('');
+  let unitsRow = colours.map(c => `<td>${(parseInt(c.units)||0).toLocaleString()}</td>`).join('');
+  let bagsRow  = colours.map(c => `<td>${calcBags(wo.weight_per_piece_g, parseInt(c.units)||0)}</td>`).join('');
+  let dyeRow   = colours.map(c => { const b = calcBags(wo.weight_per_piece_g, parseInt(c.units)||0); return `<td>${calcDye(b)}</td>`; }).join('');
+
+  const body = `
+    <div class="no-print" style="margin-bottom:8mm;display:flex;gap:8px">
+      <button onclick="window.print()" style="padding:6px 16px;background:#c94c28;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit">🖨 Print / Save PDF</button>
+      <button onclick="window.close()" style="padding:6px 14px;background:#eee;border:1px solid #ccc;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit">✕ Close</button>
+    </div>
+    <div class="h1">أمـر تشغيـل</div>
+    <div class="g2">
+      <div>
+        <div class="row"><span class="lbl">اسم المنتج:</span><span class="val">${e(p?.name||wo.product_id)}${p?.name_ar?' / '+e(p.name_ar):''}</span></div>
+        <div class="row"><span class="lbl">رقم الماكينه:</span><span class="val">${e(m?.name||'—')}</span></div>
+        <div class="row"><span class="lbl">تاريخ تركيب الفورمة:</span><span class="val">${fmtAr(wo.mould_in_at)}</span></div>
+        <div class="row"><span class="lbl">تاريخ نزول الفورمة:</span><span class="val">${fmtAr(wo.mould_out_at)}</span></div>
+        <div class="row"><span class="lbl">الكمية المطلوبة:</span><span class="val">${totalQty.toLocaleString()}</span></div>
+        <div class="row"><span class="lbl">اسم عامل نهار:</span><span class="val"></span></div>
+        <div class="row"><span class="lbl">اسم عامل ليل:</span><span class="val"></span></div>
+      </div>
+      <div>
+        <div class="row"><span class="lbl">التاريخ:</span><span class="val">${today}</span></div>
+        <div class="row"><span class="lbl">الوزن بالزنبه (ج):</span><span class="val">${wo.weight_per_piece_g||''}</span></div>
+        <div class="row"><span class="lbl">التبريد (ث):</span><span class="val">${wo.cooling_time_s??''}</span></div>
+        <div class="row"><span class="lbl">زمن الكبسه (ث):</span><span class="val">${wo.cycle_time_s||''}</span></div>
+        <div class="row"><span class="lbl">عدد القطع بالكبسة:</span><span class="val">${wo.pieces_per_cycle||1}</span></div>
+        <div class="row"><span class="lbl">مدة التشغيل (ساعة):</span><span class="val">${opHours||''}</span></div>
+        <div class="row"><span class="lbl">وقت التشغيل الفعلى:</span><span class="val"></span></div>
+        <div class="row"><span class="lbl">اجمالى الشكاير:</span><span class="val">${totalBags}</span></div>
+      </div>
+    </div>
+    ${colours.length ? `
+    <div class="sec">الألوان والخامات</div>
+    <table class="ctbl">
+      <thead><tr><th>البيان</th>${colHdrs}<th>الإجمالي</th></tr></thead>
+      <tbody>
+        <tr><td>الألوان</td>${colours.map(c=>`<td>${e(c.name)}</td>`).join('')}<td></td></tr>
+        <tr><td>عدد الوحدات</td>${unitsRow}<td>${totalQty.toLocaleString()}</td></tr>
+        <tr><td>عدد الشكاير</td>${bagsRow}<td>${totalBags}</td></tr>
+        <tr><td>كمية الصبغه (كم)</td>${dyeRow}<td>${totalDye}</td></tr>
+      </tbody>
+    </table>` : ''}
+    ${wo.material_recipe ? `
+    <div class="sec">الخامات المستخدمة</div>
+    <div style="border:1pt solid #aaa;padding:2mm 3mm;font-size:9pt;min-height:10mm">${e(wo.material_recipe)}</div>` : ''}
+    <div class="sec">سجل الإنتاج اليومي</div>
+    <table class="ltbl">
+      <thead><tr>
+        <th style="width:17mm">التاريخ</th>
+        <th style="width:13mm">بداية</th><th style="width:17mm">انتاج نهار</th><th style="width:13mm">الهالك</th>
+        <th style="width:13mm">بداية</th><th style="width:17mm">انتاج ليل</th><th style="width:13mm">الهالك</th>
+        <th>ملاحظات</th>
+      </tr></thead>
+      <tbody>
+        ${Array(LOG_ROWS).fill('<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>').join('')}
+        <tr style="font-weight:700"><td>الإجمالي</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:5mm;display:grid;grid-template-columns:1fr 1fr;gap:4mm;font-size:8pt">
+      <div>وردية نهار: <span style="border-bottom:1pt solid #aaa;display:inline-block;width:70pt"></span></div>
+      <div>وردية ليل: <span style="border-bottom:1pt solid #aaa;display:inline-block;width:70pt"></span></div>
+    </div>
+    <div class="foot">Al Watania Plast · أمر تشغيل: ${e(wo.id)} · ${new Date().toLocaleDateString('en-GB')}</div>`;
+
+  const printHtml = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>أمر تشغيل — ${e(wo.id)}</title>
+<style>
+  @page{margin:10mm}
+  *{box-sizing:border-box}
+  body{font-family:Arial,Helvetica,sans-serif;color:#111;direction:rtl;margin:0;padding:6mm 10mm}
+  .h1{text-align:center;font-size:17pt;font-weight:900;border-bottom:2pt solid #111;padding-bottom:2.5mm;margin-bottom:5mm}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:3mm 8mm;margin-bottom:4mm}
+  .row{display:flex;align-items:baseline;gap:2mm;margin-bottom:2mm;font-size:9pt}
+  .lbl{font-weight:700;white-space:nowrap;min-width:36mm;font-size:8.5pt}
+  .val{border-bottom:1pt solid #bbb;flex:1;min-height:12pt;padding-bottom:.5mm;font-size:8.5pt}
+  .sec{font-size:9pt;font-weight:900;margin:4mm 0 2mm;border-bottom:1pt solid #111;padding-bottom:1mm}
+  .ctbl{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:4mm}
+  .ctbl th{background:#eee;border:1pt solid #888;padding:1.5mm 2mm;text-align:center;font-weight:700}
+  .ctbl td{border:1pt solid #888;padding:1.5mm 2mm;text-align:center}
+  .ctbl td:first-child{text-align:right}
+  .ltbl{width:100%;border-collapse:collapse;font-size:7.5pt}
+  .ltbl th{background:#eee;border:1pt solid #888;padding:1.5mm;text-align:center;font-size:7pt;font-weight:700}
+  .ltbl td{border:1pt solid #888;height:8mm}
+  .foot{margin-top:5mm;font-size:7pt;color:#888;border-top:1pt solid #ccc;padding-top:1.5mm;text-align:center}
+  @media print{.no-print{display:none!important}}
+</style>
+</head>
+<body>${body}</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=900,height=800,menubar=no,toolbar=no,location=no');
+  if (!win) { showToast('Pop-up blocked — allow pop-ups for this page then try again', 'error'); return; }
+  win.document.write(printHtml);
+  win.document.close();
+  win.focus();
+}
+
+// ── MISC ──────────────────────────────────────────────────────────────────────
+function closeAll() { closeWOPanel(); closeWizard(); closeLogModal(); }
+
+initAuth(showApp, () => {});
+</script>
+</body>
+</html>

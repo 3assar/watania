@@ -1,0 +1,1463 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Al Watania Plast — Product Library</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Al Watania <span>Plast</span><br><small style="font-size:.65rem;color:var(--muted);font-weight:400;letter-spacing:.05em">Product Profile System</small></div>
+    <div class="login-field"><label>Username</label><input type="text" id="lu" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="login-field"><label>Password</label><input type="password" id="lp" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div class="app" id="app">
+  <div class="topbar">
+    <button class="tb-btn" id="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar" style="padding:.32rem .5rem;flex-shrink:0">☰</button>
+    <div class="logo">Al Watania <span>Plast</span></div>
+    <div class="search-wrap">
+      <svg class="si" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="17" y2="17"/></svg>
+      <input type="text" id="search" placeholder="Search name, barcode, code…" oninput="onSearch()">
+    </div>
+    <div class="tb-right">
+      <span id="sync-status" class="tb-btn">⊘ Loading</span>
+      <span class="user-badge" id="user-badge">—</span>
+      <button class="tb-btn" onclick="openLog()">📋 Activity</button>
+      <button class="tb-btn primary" id="add-product-btn" onclick="openAddProduct()" style="display:none">+ Add Product</button>
+      <button class="tb-btn" onclick="openSettings()" id="settings-btn" style="display:none">⚙ Settings</button>
+      <button class="tb-btn danger" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-sec-title">Filter</div>
+    <button class="sb-item active" onclick="setFilter('all',this)"><span class="sb-icon">📋</span>All products<span class="sb-count" id="cnt-all">—</span></button>
+    <button class="sb-item" onclick="setFilter('matched',this)"><span class="sb-icon">✓</span>With barcode<span class="sb-count" id="cnt-matched">0</span></button>
+    <button class="sb-item" onclick="setFilter('production',this)"><span class="sb-icon">⚙</span>With prod. data<span class="sb-count" id="cnt-prod">0</span></button>
+    <button class="sb-item" onclick="setFilter('edited',this)"><span class="sb-icon">✏</span>Edited<span class="sb-count" id="cnt-edited">0</span></button>
+    <button class="sb-item" onclick="setFilter('unmatched',this)"><span class="sb-icon">○</span>Website only<span class="sb-count" id="cnt-unmatched">0</span></button>
+    <button class="sb-item" onclick="setFilter('trash',this)"><span class="sb-icon">🗑</span>Trash<span class="sb-count" id="cnt-trash">0</span></button>
+    <div class="sb-div"></div>
+    <div class="sb-sec-title">Category</div>
+    <div id="cat-list"></div>
+  </aside>
+  <main class="main">
+    <div class="grid-hdr">
+      <div class="grid-title" id="grid-title">All Products</div>
+      <div class="res-info" id="res-info"></div>
+    </div>
+    <div class="grid" id="product-grid"></div>
+  </main>
+</div>
+
+<!-- ══ PANEL ══ -->
+<div class="p-overlay" id="overlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="p-hdr">
+    <h2 id="panel-title">Profile</h2>
+    <button class="ph-btn" id="edit-btn" onclick="toggleEdit()" style="display:none">✏ Edit</button>
+    <button class="ph-btn green" onclick="openPrint()">🖨 Print</button>
+    <button class="ph-btn red" id="delete-btn" onclick="trashProduct()" style="display:none">🗑 Delete</button>
+    <button class="ph-btn" id="restore-btn" onclick="restoreProduct()" style="display:none">↩ Restore</button>
+    <button class="ph-btn red" id="perm-del-btn" onclick="permDeleteProduct()" style="display:none">✕ Delete permanently</button>
+    <button class="ph-btn" onclick="closePanel()" style="padding:.3rem .5rem">✕</button>
+  </div>
+  <div class="p-body" id="panel-body"></div>
+</div>
+
+<!-- ══ ADD PRODUCT MODAL ══ -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <h3>Add New Product</h3>
+    <div class="ef"><label class="el">Product name (English)</label><input class="ei" id="np-name" placeholder="e.g. Nancy Basin 5"></div>
+    <div class="eg2">
+      <div class="ef"><label class="el">Category</label>
+        <select class="es" id="np-cat">
+          <option>Basins</option><option>Kitchen</option><option>Tables &amp; Chairs</option>
+          <option>Storage</option><option>Bathroom</option><option>Sets</option>
+          <option>Kids</option><option>Bins &amp; Dustbins</option><option>Organizers</option>
+        </select>
+      </div>
+      <div class="ef"><label class="el">Subcategory</label><input class="ei" id="np-sub" placeholder="e.g. Basins"></div>
+    </div>
+    <div class="eg2">
+      <div class="ef"><label class="el">Internal code</label><input class="ei" id="np-code" placeholder="e.g. 01-005"></div>
+      <div class="ef"><label class="el">Barcode</label><input class="ei" id="np-barcode" placeholder="6222011701231"></div>
+    </div>
+    <div class="ef"><label class="el">Arabic name</label><input class="ei" id="np-ar" placeholder="e.g. طشت نانسي 5" style="direction:rtl"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewProduct()">Create product</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONFIRM MODAL ══ -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <h3 id="confirm-title">Confirm</h3>
+    <p id="confirm-msg" style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem"></p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="settings-panel" id="settings-panel">
+  <div class="settings-box">
+    <div class="settings-hdr">
+      <h3>⚙ Settings &amp; Users</h3>
+      <button class="ph-btn" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="sb-sec-title" style="padding:.4rem 0">Users</div>
+    <div id="users-list"></div>
+    <div style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)">
+      <div style="font-size:.75rem;font-weight:600;margin-bottom:.5rem;color:var(--muted)">ADD NEW USER</div>
+      <div class="eg2" style="margin-bottom:.4rem">
+        <div class="ef"><label class="el">Username</label><input class="ei" id="new-username" placeholder="username"></div>
+        <div class="ef"><label class="el">Password</label><input class="ei" type="password" id="new-password" placeholder="password"></div>
+      </div>
+      <div class="ef" style="margin-bottom:.6rem">
+        <label class="el">Role</label>
+        <select class="es" id="new-role"><option value="viewer">Viewer (read-only)</option><option value="admin">Admin (full access)</option></select>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="addUser()">Add user</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ACTIVITY LOG ══ -->
+<div class="modal-overlay" id="log-modal">
+  <div class="modal" style="width:min(600px,92vw)">
+    <h3>📋 Activity Log</h3>
+    <div id="log-list" style="max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('log-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- ══ PRINT ══ -->
+<div class="print-overlay" id="print-overlay">
+  <div class="print-wrap">
+    <div class="print-actions">
+      <span style="color:#ccc;font-size:.78rem;margin-right:auto">Print or Save as PDF</span>
+      <button class="btn btn-green" onclick="window.print()">🖨 Print / Save PDF</button>
+      <button class="btn btn-ghost" style="color:#fff;border-color:#666" onclick="closePrint()">✕ Close</button>
+    </div>
+    <div class="print-card" id="print-card"></div>
+  </div>
+</div>
+
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+
+const SUBS_BY_CAT = {"Basins":["Basins","Basins - Magour"],"Kitchen":["Bowls","Bread/Fruit Plates","Colanders","Dish Holders","Flasks","Food Containers","Lunch Boxes","Organizers","Trays"],"Tables & Chairs":["Chairs","Chaise Longues","Entree","Tables"],"Storage":["Comodinos","Cupboards","Footwear","Shannons","Stands","Trolly","Turbos"],"Bathroom":["Bags","Bathroom Stands","Buckets","Laundry Baskets"],"Sets":["Sets"],"Kids":["Bottles","Kids General","Potties","Small Chairs"],"Bins & Dustbins":["Baskets","Bins","Dustbins"],"Organizers":["Clamp Baskets","General","Hangers","Mobile Holders","Tissue Holders"]};
+const CAT_ICONS   = {"Basins":"🪣","Kitchen":"🍳","Tables & Chairs":"🪑","Storage":"🗄️","Bathroom":"🚿","Sets":"📦","Kids":"🧸","Bins & Dustbins":"🗑️","Organizers":"🧺"};
+const CAT_COLORS  = {"Basins":"#2563eb","Kitchen":"#d97706","Tables & Chairs":"#7c3aed","Storage":"#059669","Bathroom":"#0891b2","Sets":"#dc2626","Kids":"#db2777","Bins & Dustbins":"#65a30d","Organizers":"#9333ea"};
+
+// ── DATA STATE ────────────────────────────────────────────────────────────────
+
+let allProducts  = [];     // { id, name, name_ar, category, subcategory, barcode, internal_code, image_url, … + .en .cat .sub aliases }
+let allMoulds    = [];     // raw DB rows
+let MOULDS       = [];     // sparse array indexed by dp_idx — backward compat shim
+let overridesMap = {};     // { String(productId): product_overrides row }
+
+// ── PROFILE SHIM ─────────────────────────────────────────────────────────────
+// Returns an object whose keys match what all the existing render/edit code expects,
+// mapping product_overrides column names to the old underscore-prefixed convention.
+
+function getProfile(id) {
+  const ov = overridesMap[String(id)] || {};
+  return {
+    _enName:        ov.name_en_override   || null,
+    _arName:        ov.name_ar_override   || null,
+    _catOverride:   ov.category_override  || null,
+    _subOverride:   ov.subcategory_override || null,
+    _codeOverride:  ov.code_override      || null,
+    _barcodeOverride: ov.barcode_override || null,
+    _image:         ov.image_data         || null,
+    _trashed:       ov.trashed            || false,
+    _trashedBy:     ov.trashed_by         || null,
+    _trashedAt:     ov.trashed_at         || null,
+    _lastEditBy:    ov.last_edited_by     || null,
+    _lastEditAt:    ov.last_edited_at     || null,
+    notes:          ov.notes              || null,
+    weight:         ov.weight             || null,
+    dimensions:     ov.dimensions         || null,
+    volume:         ov.volume             || null,
+    packaging:      ov.packaging_json     || null,
+    quality:        ov.quality_json       || null,
+    assemblySteps:  ov.assembly_steps     || null,
+    revisions:      ov.revisions          || null,
+    bom:            ov.bom_json           || [],
+  };
+}
+
+async function saveProfile(id, data) {
+  const patch = {
+    name_en_override:      data._enName         || null,
+    name_ar_override:      data._arName         || null,
+    category_override:     data._catOverride    || null,
+    subcategory_override:  data._subOverride    || null,
+    code_override:         data._codeOverride   || null,
+    barcode_override:      data._barcodeOverride || null,
+    image_data:            data._image          || null,
+    has_image:             !!(data._image),
+    notes:                 data.notes           || null,
+    weight:                data.weight          || null,
+    dimensions:            data.dimensions      || null,
+    volume:                data.volume          || null,
+    packaging_json:        data.packaging       || null,
+    quality_json:          data.quality         || null,
+    assembly_steps:        data.assemblySteps   || null,
+    revisions:             data.revisions       || null,
+    bom_json:              data.bom             || null,
+    last_edited_by:        data._lastEditBy     || null,
+    last_edited_at:        data._lastEditAt     || null,
+    trashed:               data._trashed        || false,
+    trashed_by:            data._trashedBy      || null,
+    trashed_at:            data._trashedAt      || null,
+  };
+  await dbUpsertOverride(String(id), patch);
+  const prevOv = overridesMap[String(id)] || {};
+  overridesMap[String(id)] = { ...prevOv, ...patch, product_id: String(id) };
+  if (!patch.image_data && prevOv.image_data) overridesMap[String(id)].image_data = prevOv.image_data;
+  localStorage.removeItem(CACHE_KEY); // force fresh fetch on next page load
+}
+
+function applyOverrides() {
+  allProducts.forEach(p => {
+    const pr = getProfile(p.id);
+    if (pr._enName)   { if (p._origEn  === undefined) p._origEn  = p.en;  p.en  = pr._enName; }
+    else if (p._origEn  !== undefined) p.en  = p._origEn;
+    if (pr._catOverride) { if (p._origCat === undefined) p._origCat = p.cat; p.cat = pr._catOverride; }
+    else if (p._origCat !== undefined) p.cat = p._origCat;
+    if (pr._subOverride) { if (p._origSub === undefined) p._origSub = p.sub; p.sub = pr._subOverride; }
+    else if (p._origSub !== undefined) p.sub = p._origSub;
+  });
+}
+
+// ── MATCHING ENGINE ───────────────────────────────────────────────────────────
+// findBC: returns [arabicName, {bc, codes, colours}] or [null, null]
+
+function findBC(p) {
+  const pr = getProfile(p.id);
+  const ar     = pr._arName     || p.name_ar     || null;
+  const bc     = pr._barcodeOverride || p.barcode || null;
+  const code   = pr._codeOverride   || p.internal_code || null;
+  const colours = p.colours_json || [];
+  if (!ar && !bc && !code) return [null, null];
+  return [ar, { bc: bc ? [bc] : [], codes: code ? [code] : [], colours, names: ar ? [ar] : [] }];
+}
+
+function findMould(p) {
+  const bom = getProfile(p.id).bom || [];
+  const linked = bom.find(row => row._dpIdx !== undefined && row._dpIdx !== null);
+  if (linked) {
+    const m = MOULDS[linked._dpIdx];
+    if (m) return [m.n, m];
+  }
+  return [null, null];
+}
+
+// ── IMAGE ─────────────────────────────────────────────────────────────────────
+
+function imgUrl(pid, size) {
+  const pr = getProfile(pid);
+  if (pr._image) return pr._image;
+  const p = allProducts.find(x => String(x.id) === String(pid));
+  if (p && p.image_url) return p.image_url.replace(/\d+_\d+\.jpg$/, `${size}_${size}.jpg`);
+  return null;
+}
+function cardThumb(p) {
+  const url = imgUrl(p.id, 270);
+  const ic  = CAT_ICONS[p.cat]  || '📦';
+  const cc  = CAT_COLORS[p.cat] || '#888';
+  if (url) return `<div class="card-thumb" style="background:${cc}15;padding:0;overflow:hidden"><img src="${url}" alt="" style="width:100%;height:100%;object-fit:contain;padding:4px" onerror="this.style.display='none';this.parentElement.style.fontSize='2.2rem';this.parentElement.style.display='flex';this.parentElement.style.alignItems='center';this.parentElement.style.justifyContent='center';this.parentElement.textContent='${ic}'"></div>`;
+  const ov = overridesMap[String(p.id)];
+  if (ov?.has_image) return `<div class="card-thumb" style="background:${cc}15" data-pid="${esc(String(p.id))}">${ic}</div>`;
+  return `<div class="card-thumb" style="background:${cc}15">${ic}</div>`;
+}
+function panelHero(p) {
+  const url = imgUrl(p.id, 530); const ic = CAT_ICONS[p.cat]||'📦'; const cc = CAT_COLORS[p.cat]||'#888';
+  if (url) return `<div style="width:calc(100% + 2.2rem);height:190px;margin:-1.1rem -1.1rem 1.1rem;overflow:hidden;border-bottom:1px solid var(--border);background:${cc}10"><img src="${url}" alt="" style="width:100%;height:100%;object-fit:contain;padding:8px" onerror="this.parentElement.style.display='none'"></div>`;
+  return `<div style="width:calc(100% + 2.2rem);height:100px;margin:-1.1rem -1.1rem 1.1rem;display:flex;align-items:center;justify-content:center;font-size:3rem;background:${cc}15;border-bottom:1px solid var(--border)">${ic}</div>`;
+}
+
+// ── SYNC STATUS ───────────────────────────────────────────────────────────────
+
+function setSyncStatus(state, msg) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const icons = { ok:'☁', saving:'↑', error:'⚠', offline:'⊘', loading:'…' };
+  el.textContent = (icons[state]||'') + ' ' + msg;
+  el.style.color = state==='error' ? 'var(--red)' : state==='saving' ? 'var(--amber)' : state==='ok' ? 'var(--green)' : 'var(--muted)';
+}
+
+// ── APP STATE ─────────────────────────────────────────────────────────────────
+
+let currentFilter = 'all', currentCat = '', searchQ = '', currentPid = null, editMode = false, unsaved = false;
+
+function getActiveProducts()  { return allProducts.filter(p => !getProfile(p.id)._trashed); }
+function getTrashedProducts() { return allProducts.filter(p =>  getProfile(p.id)._trashed); }
+
+// ── SHOW APP / INIT ───────────────────────────────────────────────────────────
+
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = '';   // clear any inline override
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('user-badge').textContent = SESSION.username + ' (' + SESSION.role + ')';
+  restoreSidebarState();
+  if (SESSION.role === 'admin') {
+    document.getElementById('settings-btn').style.display = '';
+    document.getElementById('add-product-btn').style.display = '';
+  }
+  await init();
+  // Handle deep link from production.html: ?pid=X&bom=1
+  const params = new URLSearchParams(window.location.search);
+  const deepPidRaw = params.get('pid');
+  if (deepPidRaw) {
+    // Convert to number if the ID is numeric (products table uses integer PKs)
+    const deepPid = /^\d+$/.test(deepPidRaw) ? parseInt(deepPidRaw, 10) : deepPidRaw;
+    await openPanel(deepPid);
+    if (params.get('bom') === '1') {
+      editMode = true;
+      const editBtn = document.getElementById('edit-btn');
+      if (editBtn) { editBtn.textContent = '← View'; editBtn.classList.add('active'); }
+      renderEdit(deepPid);
+      setTimeout(() => {
+        const bomEl = document.getElementById('bom-rows');
+        if (bomEl) bomEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 250);
+    }
+  }
+}
+
+// ── CACHE ─────────────────────────────────────────────────────────────────────
+
+const CACHE_KEY = 'awp_lib_v1';
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+function loadFromCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (!c || Date.now() - c.ts > CACHE_TTL) return null;
+    return c;
+  } catch { return null; }
+}
+
+function saveToCache(products, moulds, overrides) {
+  try {
+    // Never persist image_data — it's huge and loaded on demand
+    const slim = overrides.map(ov => { const { image_data, ...rest } = ov; return rest; });
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), products, moulds, overrides: slim }));
+  } catch(e) {}
+}
+
+async function fetchAndCache() {
+  try {
+    const [products, moulds, overrides] = await Promise.all([dbGetProducts(), dbGetMoulds(), dbGetOverridesLight()]);
+    saveToCache(products, moulds, overrides);
+  } catch(e) {}
+}
+
+function processData(products, moulds, overrides) {
+  allProducts = products.map(p => ({ ...p, en: p.name, cat: p.category, sub: p.subcategory || '' }));
+  allMoulds = moulds;
+  MOULDS = [];
+  moulds.forEach(m => {
+    if (m.dp_idx !== null && m.dp_idx !== undefined) {
+      MOULDS[m.dp_idx] = {
+        ...m,
+        n:   m.name_ar,    g:   m.group_ar,   sg:  m.subgroup,
+        mc:  m.mould_code, mat: m.material_recipe,
+        pc:  String(m.pieces_per_cycle || 1),
+        ct:  String(m.cycle_time_sec || ''),
+        mid: m.internal_id,
+        colours:  m.colours  || [],
+        machines: (m.compatible_machines || []).map(String),
+      };
+    }
+  });
+  // Rebuild overridesMap, preserving any image_data already loaded into memory
+  const prev = overridesMap;
+  overridesMap = {};
+  for (const ov of overrides) {
+    overridesMap[String(ov.product_id)] = { ...ov };
+    const prevImg = prev[String(ov.product_id)]?.image_data;
+    if (prevImg !== undefined) overridesMap[String(ov.product_id)].image_data = prevImg;
+  }
+  applyOverrides();
+  buildCatList();
+  updateCounts();
+  renderGrid();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+async function init() {
+  setSyncStatus('loading', 'Loading…');
+  const cached = loadFromCache();
+  if (cached) {
+    processData(cached.products, cached.moulds, cached.overrides);
+    setSyncStatus('ok', 'Ready');
+    fetchAndCache(); // refresh cache in background for next load
+    return;
+  }
+  try {
+    const [products, moulds, overrides] = await Promise.all([dbGetProducts(), dbGetMoulds(), dbGetOverridesLight()]);
+    saveToCache(products, moulds, overrides);
+    processData(products, moulds, overrides);
+    setSyncStatus('ok', 'Synced');
+  } catch (e) {
+    setSyncStatus('error', 'Load failed');
+    document.getElementById('product-grid').innerHTML =
+      `<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--red)">Failed to load data: ${esc(e.message)}</div>`;
+    console.error('Init failed:', e);
+  }
+}
+
+// ── IMAGE OBSERVER ────────────────────────────────────────────────────────────
+
+let _imgObserver = null;
+
+function setupImageObserver() {
+  if (_imgObserver) _imgObserver.disconnect();
+  _imgObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el  = entry.target;
+      const pid = el.dataset.pid;
+      if (!pid) return;
+      _imgObserver.unobserve(el);
+      loadCardImage(el, pid);
+    });
+  }, { rootMargin: '200px' });
+  document.querySelectorAll('.card-thumb[data-pid]').forEach(el => _imgObserver.observe(el));
+}
+
+async function loadCardImage(el, pid) {
+  // Use already-loaded image_data if available
+  const existing = overridesMap[String(pid)]?.image_data;
+  if (existing) { setCardThumb(el, existing, pid); return; }
+  try {
+    const img = await dbGetOverrideImage(pid);
+    if (overridesMap[String(pid)]) overridesMap[String(pid)].image_data = img || null;
+    if (img && el.dataset.pid) setCardThumb(el, img, pid);
+  } catch(e) {}
+}
+
+function setCardThumb(el, imgData, pid) {
+  const p  = allProducts.find(x => String(x.id) === String(pid));
+  const ic = CAT_ICONS[p?.cat] || '📦';
+  el.removeAttribute('data-pid');
+  el.style.padding  = '0';
+  el.style.overflow = 'hidden';
+  el.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = imgData;
+  img.style.cssText = 'width:100%;height:100%;object-fit:contain;padding:4px';
+  img.onerror = () => {
+    el.style.padding  = '';
+    el.style.overflow = '';
+    el.innerHTML      = ic;
+  };
+  el.appendChild(img);
+}
+
+// ── CATEGORY LIST ─────────────────────────────────────────────────────────────
+
+function buildCatList() {
+  const cats = {};
+  getActiveProducts().forEach(p => { cats[p.cat] = (cats[p.cat] || 0) + 1; });
+  const el = document.getElementById('cat-list');
+  el.innerHTML = `<button class="sb-item" onclick="setCat('',this)"><span class="sb-icon">🔍</span>All<span class="sb-count">${getActiveProducts().length}</span></button>`;
+  Object.entries(cats).sort().forEach(([c, n]) => {
+    const b = document.createElement('button');
+    b.className = 'sb-item';
+    b.onclick = () => setCat(c, b);
+    b.innerHTML = `<span class="sb-icon">${CAT_ICONS[c]||'📦'}</span>${c}<span class="sb-count">${n}</span>`;
+    el.appendChild(b);
+  });
+}
+
+function updateCounts() {
+  let matched = 0, prod = 0, edited = 0, unmatched = 0, trash = 0;
+  allProducts.forEach(p => {
+    const pr = getProfile(p.id);
+    if (pr._trashed) { trash++; return; }
+    const [ar] = findBC(p);
+    const [, md] = findMould(p);
+    if (ar) matched++; else unmatched++;
+    const bom = pr.bom || [];
+    if (md || bom.some(row => row._dpIdx !== undefined && row._dpIdx !== null)) prod++;
+    if (overridesMap[String(p.id)]) edited++;
+  });
+  document.getElementById('cnt-all').textContent      = getActiveProducts().length;
+  document.getElementById('cnt-matched').textContent  = matched;
+  document.getElementById('cnt-prod').textContent     = prod;
+  document.getElementById('cnt-edited').textContent   = edited;
+  document.getElementById('cnt-unmatched').textContent = unmatched;
+  document.getElementById('cnt-trash').textContent    = trash;
+}
+
+// ── FILTER / SEARCH ───────────────────────────────────────────────────────────
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderGrid();
+}
+function setCat(c, el) {
+  currentCat = c;
+  document.querySelectorAll('#cat-list .sb-item').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderGrid();
+}
+function onSearch() { searchQ = document.getElementById('search').value.trim().toLowerCase(); renderGrid(); }
+
+function getFiltered() {
+  const pool = currentFilter === 'trash' ? getTrashedProducts() : getActiveProducts();
+  return pool.filter(p => {
+    if (currentCat && p.cat !== currentCat) return false;
+    const [ar]   = findBC(p);
+    const [, md] = findMould(p);
+    const pr  = getProfile(p.id);
+    const bom = pr.bom || [];
+    const hasProd = md || bom.some(row => row._dpIdx !== undefined && row._dpIdx !== null);
+    const hasEdit = !!overridesMap[String(p.id)];
+    if (currentFilter === 'matched'    && !ar)       return false;
+    if (currentFilter === 'production' && !hasProd)  return false;
+    if (currentFilter === 'edited'     && !hasEdit)  return false;
+    if (currentFilter === 'unmatched'  && ar)        return false;
+    if (searchQ) {
+      const inEn = (p.en  || '').toLowerCase().includes(searchQ);
+      const inCat = (p.cat || '').toLowerCase().includes(searchQ);
+      const inAr  = (pr._arName || p.name_ar || '').includes(searchQ);
+      const inBC  = (p.barcode || '').includes(searchQ) || (p.internal_code || '').toLowerCase().includes(searchQ);
+      if (!inEn && !inCat && !inAr && !inBC) return false;
+    }
+    return true;
+  });
+}
+
+// ── RENDER GRID ───────────────────────────────────────────────────────────────
+
+function hl(t) {
+  if (!searchQ) return t;
+  const re = new RegExp(searchQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  return String(t).replace(re, m => `<mark>${m}</mark>`);
+}
+
+function renderGrid() {
+  const filtered = getFiltered();
+  document.getElementById('res-info').textContent = filtered.length + ' of ' + allProducts.length + ' shown';
+  const grid = document.getElementById('product-grid');
+  if (!filtered.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2.5rem;color:var(--muted)">No products match.</div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(p => {
+    const [ar, d] = findBC(p);
+    const [, md]  = findMould(p);
+    const pr      = getProfile(p.id);
+    const isTrashed = pr._trashed;
+    const hasEdit   = !!overridesMap[String(p.id)];
+    const bom = pr.bom || [];
+    const hasProd = md || bom.some(row => row._dpIdx !== undefined && row._dpIdx !== null);
+    const colCount  = d ? (d.colours || []).length : 0;
+    const firstCode = d ? (d.codes || [])[0] : '';
+    return `<div class="card" onclick="openPanel(${esc(JSON.stringify(p.id))})">
+      ${cardThumb(p)}
+      <div class="card-body">
+        <div class="card-name">${hl(p.en)}</div>
+        <div class="card-sub">${p.sub}</div>
+        <div class="card-badges">
+          ${isTrashed ? '<span class="badge b-trash">🗑 trash</span>' : ''}
+          ${ar ? '<span class="badge b-ok">✓</span>' : '<span class="badge b-no">no barcode</span>'}
+          ${firstCode ? `<span class="badge b-code">${firstCode}</span>` : ''}
+          ${hasProd ? '<span class="badge b-prod">⚙</span>' : ''}
+          ${colCount > 0 ? `<span class="badge b-edit">${colCount+1} col</span>` : ''}
+          ${hasEdit ? '<span class="badge b-edit">✏</span>' : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  setupImageObserver();
+}
+
+// ── PANEL ─────────────────────────────────────────────────────────────────────
+
+async function openPanel(id) {
+  currentPid = id; editMode = false; unsaved = false;
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('panel-title').textContent = p.en;
+  const pr = getProfile(id);
+  const isTrashed = pr._trashed;
+  document.getElementById('edit-btn').style.display    = (canEdit() && !isTrashed) ? '' : 'none';
+  document.getElementById('delete-btn').style.display  = (canEdit() && !isTrashed) ? '' : 'none';
+  document.getElementById('restore-btn').style.display = (canEdit() && isTrashed)  ? '' : 'none';
+  document.getElementById('perm-del-btn').style.display = (isAdmin() && isTrashed) ? '' : 'none';
+  document.getElementById('edit-btn').textContent = '✏ Edit';
+  document.getElementById('edit-btn').classList.remove('active');
+  renderView(id);
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+  // Lazy-load image_data if not yet in memory
+  const ov = overridesMap[String(id)];
+  if (ov && !('image_data' in ov)) {
+    const img = await dbGetOverrideImage(id);
+    ov.image_data = img;
+    renderView(id); // re-render with image now available
+  }
+}
+function closePanel() {
+  if (unsaved && !confirm('Discard unsaved changes?')) return;
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  currentPid = null; editMode = false; unsaved = false;
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
+
+function toggleEdit() {
+  if (editMode) {
+    if (unsaved && !confirm('Discard changes?')) return;
+    editMode = false; unsaved = false;
+    document.getElementById('edit-btn').textContent = '✏ Edit';
+    document.getElementById('edit-btn').classList.remove('active');
+    renderView(currentPid);
+  } else {
+    editMode = true;
+    document.getElementById('edit-btn').textContent = '← View';
+    document.getElementById('edit-btn').classList.add('active');
+    renderEdit(currentPid);
+  }
+}
+
+// ── VIEW MODE ─────────────────────────────────────────────────────────────────
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function empty(v) { return !v || v === 'nan' || v === ''; }
+function sec(title, status, content) {
+  const badge = status==='ok' ? '<span class="sec-badge sb-ok">✓ matched</span>' : status==='miss' ? '<span class="sec-badge sb-miss">no data</span>' : '';
+  return `<div class="sec"><div class="sec-hdr">${title} ${badge}</div>${content}</div>`;
+}
+function cell(lbl, val) { return `<div class="prod-cell"><div class="prod-lbl">${lbl}</div><div class="prod-val">${val||'—'}</div></div>`; }
+
+function normRecipes(row, mData) {
+  if (row.recipes?.length) return row.recipes;
+  const ratios = row.materialRatios || (mData?.mat ? [{name:mData.mat,qty:'1'}] : []);
+  return ratios.length ? [{ name: 'Default', ratios }] : [];
+}
+
+function renderMaterialRatios(mat, savedRatios) {
+  if (savedRatios && savedRatios.length) {
+    const total = savedRatios.reduce((a, r) => a + (parseFloat(r.qty)||0), 0);
+    const bars  = savedRatios.map(r => { const pct = total ? Math.round((parseFloat(r.qty)||0)/total*100) : 0; return `<div style="flex:${parseFloat(r.qty)||1};background:${r.color||'#4a90d9'}" title="${r.name} ${pct}%"></div>`; }).join('');
+    const rows  = savedRatios.map(r => { const pct = total ? Math.round((parseFloat(r.qty)||0)/total*100) : 0; return `<div style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;margin-bottom:.2rem"><span style="width:10px;height:10px;border-radius:50%;background:${r.color||'#4a90d9'};flex-shrink:0"></span><span>${esc(r.name)}</span><span style="margin-left:auto;font-family:monospace;color:var(--muted)">${r.qty} → ${pct}%</span></div>`; }).join('');
+    return `<div class="ratio-bar">${bars}</div><div style="margin-top:.5rem">${rows}</div>`;
+  }
+  if (!empty(mat)) return `<div style="direction:rtl;font-family:monospace;font-size:.78rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.35rem .55rem">${esc(mat)}</div>`;
+  return '<span class="no-data">Not entered</span>';
+}
+
+function renderView(id) {
+  const p  = allProducts.find(x => x.id === id);
+  const [ar, d] = findBC(p);
+  const [, md]  = findMould(p);
+  const pr = getProfile(id);
+
+  let html = panelHero(p);
+
+  // Identification
+  const _arName  = pr._arName  || ar;
+  const _code    = pr._codeOverride    || (d && (d.codes || [])[0]) || '';
+  const _barcode = pr._barcodeOverride || (d && (d.bc   || [])[0]) || '';
+  html += sec('Identification', '', `<table class="itbl">
+    <tr><td>English name</td><td class="iv">${esc(pr._enName || p.en)}</td></tr>
+    ${_arName ? `<tr><td>Arabic name</td><td class="iv rtl">${esc(_arName)}</td></tr>` : ''}
+    <tr><td>Category</td><td class="iv">${esc(p.cat)} › ${esc(p.sub)}</td></tr>
+    ${_code    ? `<tr><td>Internal code</td><td class="iv mono">${esc(_code)}</td></tr>` : ''}
+    ${_barcode ? `<tr><td>Barcode</td><td class="iv mono">${esc(_barcode)}</td></tr>` : ''}
+    <tr><td>Website ID</td><td class="iv mono">#${id}</td></tr>
+    ${pr.notes    ? `<tr><td>Notes</td><td class="iv">${esc(pr.notes)}</td></tr>` : ''}
+    ${pr._lastEditBy ? `<tr><td>Last edited by</td><td class="iv"><span style="color:var(--purple);font-weight:600">${esc(pr._lastEditBy)}</span> · <span style="color:var(--muted);font-size:.75rem">${pr._lastEditAt ? new Date(pr._lastEditAt).toLocaleString('en-GB') : ''}</span></td></tr>` : ''}
+  </table>`);
+
+  // Specs
+  const w = pr.weight||'', dim = pr.dimensions||'', vol = pr.volume||'';
+  html += sec('Technical specifications', '', `<table class="itbl">
+    <tr><td>Weight (kg)</td><td class="iv ${w?'':'empty'}">${w||'— not entered'}</td></tr>
+    <tr><td>Dimensions (cm)</td><td class="iv ${dim?'':'empty'}">${dim||'— not entered'}</td></tr>
+    <tr><td>Volume (cm³)</td><td class="iv ${vol?'':'empty'}">${vol||'— not entered'}</td></tr>
+  </table>`);
+
+  // Barcodes
+  if (d) {
+    const rows = (d.codes || []).map((c, i) => `<div class="bc-row"><span class="bc-code">${c||'—'}</span><span>${(d.bc||[])[i]||''}</span>${(d.names||[])[i]?`<span class="bc-ar">${(d.names||[])[i]}</span>`:''}</div>`).join('');
+    html += sec('Barcodes & internal codes', 'ok', rows);
+  } else {
+    html += sec('Barcodes & internal codes', 'miss', '<p class="no-data">No match found. Enter manually in Edit mode.</p>');
+  }
+
+  if (d && (d.colours || []).length > 0) {
+    html += sec('Colour variants', '', `<div class="chip-wrap">${d.colours.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div>`);
+  }
+
+  // BOM
+  const bom = pr.bom || [];
+  if (bom.length) {
+    const bomHtml = bom.map((row, i) => {
+      const mData    = row._dpIdx !== undefined ? MOULDS[row._dpIdx] || {} : {};
+      const colours  = row.colours  || mData.colours  || [];
+      const machines = row.machines || mData.machines || [];
+      const recipes  = normRecipes(row, mData);
+      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem .8rem;margin-bottom:.6rem">
+        <div style="font-size:.7rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.06em">Component ${i+1}${row._dpIdx!==undefined?` — <span style="color:var(--blue)">${esc(MOULDS[row._dpIdx]?.n||'')}</span>`:''}</div>
+        <div class="prod-grid">
+          ${cell('Mould name',    row.mouldName   || mData.mc || mData.n || '—')}
+          ${cell('Cycle time',   (row.cycleTime   || mData.ct || '—') + 's')}
+          ${cell('Pieces / cycle', row.piecesCycle || mData.pc || '—')}
+          ${cell('Part weight',  row.partWeight ? row.partWeight + ' kg' : '—')}
+          ${cell('Machines',     machines.length ? machines.join(', ') : '—')}
+        </div>
+        ${recipes.length ? `<div style="margin-top:.5rem">
+          <div class="prod-lbl" style="margin-bottom:.3rem">Material recipes (${recipes.length})</div>
+          ${recipes.map(rec => `<div style="margin-bottom:.45rem">
+            ${recipes.length > 1 ? `<div style="font-size:.67rem;font-weight:700;color:var(--accent);margin-bottom:.2rem">${esc(rec.name||'Recipe')}</div>` : ''}
+            ${renderMaterialRatios(null, rec.ratios)}
+          </div>`).join('')}
+        </div>` : ''}
+        ${colours.length ? `<div style="margin-top:.4rem"><div class="prod-lbl">Colours</div><div class="chip-wrap" style="margin-top:.25rem">${colours.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div></div>` : ''}
+      </div>`;
+    }).join('');
+    html += sec('Bill of materials (BOM)', 'ok', bomHtml);
+  } else {
+    html += sec('Bill of materials (BOM)', 'miss', '<p class="no-data">No BOM components entered. Use Edit mode to add mould components.</p>');
+  }
+
+  // Packaging
+  const pkg = pr.packaging || {};
+  html += sec('Packaging & pallet', '', `<table class="itbl">
+    <tr><td>Inner packaging</td><td class="iv ${pkg.inner?'':'empty'}">${pkg.inner||'— not entered'}</td></tr>
+    <tr><td>Carton box</td><td class="iv ${pkg.carton?'':'empty'}">${pkg.carton||'— not entered'}</td></tr>
+    <tr><td>Pallet config</td><td class="iv ${pkg.pallet?'':'empty'}">${pkg.pallet||'— not entered'}</td></tr>
+    <tr><td>Units per pallet</td><td class="iv ${pkg.unitsPerPallet?'':'empty'}">${pkg.unitsPerPallet||'— not entered'}</td></tr>
+  </table>`);
+
+  // Quality
+  const q = pr.quality || {};
+  html += sec('Quality requirements', '', `<table class="itbl">
+    <tr><td>Tolerances</td><td class="iv ${q.dimTol?'':'empty'}">${q.dimTol||'— not entered'}</td></tr>
+    <tr><td>Visual criteria</td><td class="iv ${q.visual?'':'empty'}">${q.visual||'— not entered'}</td></tr>
+    <tr><td>Functional tests</td><td class="iv ${q.functional?'':'empty'}">${q.functional||'— not entered'}</td></tr>
+  </table>`);
+
+  // Assembly
+  const steps = pr.assemblySteps || [];
+  html += sec('Assembly steps', '', steps.length ? `<ol style="padding-left:1.1rem;font-size:.8rem;line-height:1.8">${steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : '<p class="no-data">Not documented yet.</p>');
+
+  // Revisions
+  const revs = pr.revisions || [];
+  html += sec('Revision history', '', revs.length ? `<table class="itbl"><tr style="color:var(--muted)"><td>Rev</td><td>Date</td><td>Description</td><td>Approved by</td></tr>${revs.map(r => `<tr><td>${esc(r.rev)}</td><td>${esc(r.date)}</td><td>${esc(r.desc)}</td><td>${esc(r.by)}</td></tr>`).join('')}</table>` : '<p class="no-data">No revisions.</p>');
+
+  if (typeof id === 'number' && id < 600) {
+    html += `<div class="sec"><a href="https://elwataniaplast.com/en/site/product/${id}" target="_blank" style="font-size:.78rem;color:var(--blue)">🔗 View on elwataniaplast.com</a></div>`;
+  }
+
+  document.getElementById('panel-body').innerHTML = html;
+}
+
+// ── EDIT MODE ─────────────────────────────────────────────────────────────────
+
+function renderEdit(id) {
+  const p  = allProducts.find(x => x.id === id);
+  const [ar, d] = findBC(p);
+  const [, md]  = findMould(p);
+  const pr  = getProfile(id);
+  const curCode    = pr._codeOverride    || (d && (d.codes||[])[0]) || '';
+  const curBarcode = pr._barcodeOverride || (d && (d.bc  ||[])[0]) || '';
+  const curCat     = pr._catOverride     || p.cat || '';
+  const curSub     = pr._subOverride     || p.sub || '';
+  const curImg     = pr._image           || '';
+  const mData      = md || {};
+  const pkg    = pr.packaging     || {};
+  const q      = pr.quality       || {};
+  const steps  = pr.assemblySteps || [''];
+  const revs   = pr.revisions     || [{rev:'0',date:new Date().toISOString().slice(0,10),desc:'Initial',by:SESSION.username}];
+  const bomRows = pr.bom && pr.bom.length ? pr.bom : [{}];
+
+  let html = `<div style="margin-bottom:1rem;padding:.55rem .75rem;background:var(--amberbg);border:1px solid var(--amber);border-radius:8px;font-size:.76rem;color:var(--amber)">✏ <strong>Edit mode</strong> — Changes saved to Supabase on save.</div>`;
+
+  html += `<div class="sec"><div class="sec-hdr">Product identity</div>
+    <div class="eg2">
+      <div class="ef"><label class="el">English name</label><input class="ei" id="e_en_name" value="${esc(p.en||'')}"></div>
+      <div class="ef"><label class="el">Arabic name</label><input class="ei rtl" id="e_ar_name" value="${esc(pr._arName||ar||'')}"></div>
+    </div>
+    <div class="eg2">
+      <div class="ef"><label class="el">Internal code</label><input class="ei" id="e_code" value="${esc(curCode)}"></div>
+      <div class="ef"><label class="el">Barcode</label><input class="ei" id="e_barcode" value="${esc(curBarcode)}"></div>
+    </div>
+    <div class="eg2">
+      <div class="ef"><label class="el">Category</label><select class="ei" id="e_category" onchange="updateSubcats()">${Object.keys(SUBS_BY_CAT).map(c=>'<option value="'+esc(c)+'"'+(c===curCat?' selected':'')+'>'+esc(c)+'</option>').join('')}</select></div>
+      <div class="ef"><label class="el">Subcategory</label><select class="ei" id="e_subcategory">${(SUBS_BY_CAT[curCat]||[]).map(x=>'<option value="'+esc(x)+'"'+(x===curSub?' selected':'')+'>'+esc(x)+'</option>').join('')}</select></div>
+    </div>
+    <div class="ef"><label class="el">Product image</label>
+      <input type="hidden" id="e_image_data" value="${curImg}">
+      <div style="display:flex;gap:.6rem;align-items:center">
+        <div id="e_img_prev" style="width:64px;height:64px;border:1px solid var(--border);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface2)">${curImg?`<img src="${curImg}" style="width:100%;height:100%;object-fit:contain">`:'<span style="font-size:1.6rem">🖼️</span>'}</div>
+        <input type="file" accept="image/*" id="e_img_file" onchange="handleImgUpload(this)" style="font-size:.78rem;flex:1">
+        <button type="button" class="del-btn" onclick="clearProdImg()" title="Remove image">✕</button>
+      </div>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:.3rem">Auto-resized to ~500px. Overrides the website image on the card and profile.</div>
+    </div>
+  </div>`;
+
+  html += `<div class="sec"><div class="sec-hdr">General</div>
+    <div class="ef"><label class="el">Notes</label><textarea class="et" id="e_notes" rows="2">${esc(pr.notes||'')}</textarea></div>
+  </div>`;
+
+  html += `<div class="sec"><div class="sec-hdr">Technical specifications</div>
+    <div class="eg2">
+      <div class="ef"><label class="el">Weight (kg)</label><input class="ei" id="e_weight" value="${esc(pr.weight||'')}"></div>
+      <div class="ef"><label class="el">Volume (cm³)</label><input class="ei" id="e_volume" value="${esc(pr.volume||'')}"></div>
+    </div>
+    <div class="ef"><label class="el">Dimensions (L×W×H cm)</label><input class="ei" id="e_dims" value="${esc(pr.dimensions||'')}"></div>
+  </div>`;
+
+  html += `<div class="sec">
+    <div class="sec-hdr" style="justify-content:space-between">
+      Bill of materials (BOM)
+      <button class="add-row-btn" onclick="addBomRow()" style="width:auto;margin:0;padding:.2rem .6rem;font-size:.68rem">+ Add component</button>
+    </div>
+    <div id="bom-rows">${bomRows.map((row, i) => bomRowHtml(row, i)).join('')}</div>
+  </div>`;
+
+  html += `<div class="sec"><div class="sec-hdr">Packaging & pallet</div>
+    <div class="eg2">
+      <div class="ef"><label class="el">Inner packaging</label><input class="ei" id="e_pkg_inner" value="${esc(pkg.inner||'')}"></div>
+      <div class="ef"><label class="el">Carton box</label><input class="ei" id="e_pkg_carton" value="${esc(pkg.carton||'')}"></div>
+    </div>
+    <div class="eg2">
+      <div class="ef"><label class="el">Pallet config</label><input class="ei" id="e_pkg_pallet" value="${esc(pkg.pallet||'')}"></div>
+      <div class="ef"><label class="el">Units per pallet</label><input class="ei" id="e_pkg_units" value="${esc(pkg.unitsPerPallet||'')}"></div>
+    </div>
+  </div>`;
+
+  html += `<div class="sec"><div class="sec-hdr">Quality requirements</div>
+    <div class="ef"><label class="el">Tolerances</label><input class="ei" id="e_q_dim" value="${esc(q.dimTol||'')}"></div>
+    <div class="ef"><label class="el">Visual criteria</label><input class="ei" id="e_q_vis" value="${esc(q.visual||'')}"></div>
+    <div class="ef"><label class="el">Functional tests</label><input class="ei" id="e_q_func" value="${esc(q.functional||'')}"></div>
+  </div>`;
+
+  html += `<div class="sec"><div class="sec-hdr">Assembly steps</div>
+    <div id="step-rows">${steps.map((s, i) => stepRowHtml(s, i)).join('')}</div>
+    <button class="add-row-btn" onclick="addStep()">+ Add step</button>
+  </div>`;
+
+  html += `<div class="sec"><div class="sec-hdr">Revision history</div>
+    <div style="display:grid;grid-template-columns:50px 105px 1fr 110px 28px;gap:.3rem;font-size:.68rem;color:var(--muted);margin-bottom:.25rem"><span>Rev</span><span>Date</span><span>Description</span><span>Approved by</span><span></span></div>
+    <div id="rev-rows">${revs.map((r, i) => revRowHtml(r, i)).join('')}</div>
+    <button class="add-row-btn" onclick="addRev()">+ Add revision</button>
+  </div>`;
+
+  html += `<div class="save-bar">
+    <button class="save-btn" onclick="saveEdit()">💾 Save profile</button>
+    <button class="cancel-btn" onclick="toggleEdit()">Cancel</button>
+  </div>`;
+
+  document.getElementById('panel-body').innerHTML = html;
+}
+
+// ── BOM ROW HELPERS ───────────────────────────────────────────────────────────
+
+function bomRowHtml(row, i) {
+  const mData    = row._dpIdx !== undefined ? MOULDS[row._dpIdx] || {} : {};
+  const machines = (row.machines || mData.machines || []).join(', ');
+  const recipes  = normRecipes(row, mData).length ? normRecipes(row, mData) : [{name:'Default', ratios:[{name:'',qty:'1'}]}];
+  const colours  = (row.colours  || mData.colours  || []).join(', ');
+  return `<div class="bom-component" id="bom-${i}" data-dpidx="${row._dpIdx!==undefined?row._dpIdx:''}" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.75rem .8rem;margin-bottom:.65rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+      <span style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Component ${i+1}</span>
+      <button class="del-btn" onclick="delBomRow(${i})">✕ Remove</button>
+    </div>
+    <div class="dp-link-box" style="margin-bottom:.6rem">
+      <div class="dp-link-label">DataProducts link ${row._dpIdx!==undefined?'<span style="color:var(--green)">✓ linked</span>':'<span style="color:var(--muted)">not linked</span>'}</div>
+      ${row._dpIdx!==undefined?`<div class="dp-link-val">${esc(MOULDS[row._dpIdx]?.n||'')} <button class="del-btn" onclick="unlinkBomRow(${i})" style="font-size:.65rem;padding:.15rem .35rem">✕ Unlink</button></div>`:''}
+      <div class="dp-search-wrap">
+        <input class="dp-search-input" id="dp-search-${i}" placeholder="Search DataProducts by name, mould code…" oninput="searchDPRow(this.value,${i})" autocomplete="off">
+        <div class="dp-dropdown" id="dp-dd-${i}" style="display:none"></div>
+      </div>
+    </div>
+    <div class="eg2" style="margin-bottom:.45rem">
+      <div class="ef"><label class="el">Mould name / code</label><input class="ei" id="bom-mould-${i}" value="${esc(row.mouldName||mData.mc||mData.n||'')}"></div>
+      <div class="ef"><label class="el">Cycle time (s)</label><input class="ei" id="bom-ct-${i}" value="${esc(row.cycleTime||mData.ct||'')}"></div>
+    </div>
+    <div class="eg3" style="margin-bottom:.45rem">
+      <div class="ef"><label class="el">Pieces / cycle</label><input class="ei" id="bom-pc-${i}" value="${esc(row.piecesCycle||mData.pc||'')}"></div>
+      <div class="ef"><label class="el">Part weight (kg)</label><input class="ei" id="bom-weight-${i}" value="${esc(row.partWeight||'')}" placeholder="e.g. 0.275"></div>
+      <div class="ef"><label class="el">Machine availability</label><input class="ei" id="bom-machines-${i}" value="${esc(machines)}"></div>
+    </div>
+    <div class="ef" style="margin-bottom:.45rem"><label class="el">Colours (comma separated)</label><input class="ei" id="bom-colours-${i}" value="${esc(colours)}"></div>
+    <div class="ef">
+      <label class="el">Material recipes</label>
+      <div id="bom-recipes-${i}">${recipes.map((rec, ri) => recipeBlockHtml(rec, i, ri)).join('')}</div>
+      <button class="add-row-btn" onclick="addBomRecipe(${i})" style="margin-top:.4rem">+ Add recipe</button>
+    </div>
+  </div>`;
+}
+
+function recipeBlockHtml(rec, bomIdx, ri) {
+  const defaultName = ri === 0 ? 'Default' : 'Recipe ' + (ri + 1);
+  const rows = (rec.ratios || [{name:'',qty:'1'}]).map((r, rj) => ratioInBomHtml(r, bomIdx, ri, rj)).join('');
+  return `<div id="bom-recipe-${bomIdx}-${ri}" class="bom-recipe-block" style="border:1px solid var(--border);border-radius:7px;padding:.5rem .6rem;margin-bottom:.45rem">
+    <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem">
+      <input class="ei" id="bom-recipe-name-${bomIdx}-${ri}" value="${esc(rec.name||defaultName)}" placeholder="Recipe name (e.g. Standard)" style="flex:1;font-weight:600">
+      <button class="del-btn" onclick="delBomRecipe(${bomIdx},${ri})" title="Remove recipe">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 70px 60px 28px;gap:.3rem;font-size:.65rem;color:var(--muted);margin-bottom:.2rem"><span>Material</span><span>Ratio</span><span>%</span><span></span></div>
+    <div id="bom-ratios-${bomIdx}-${ri}">${rows}</div>
+    <button class="add-row-btn" onclick="addBomRatioRow(${bomIdx},${ri})" style="margin-top:.25rem">+ Add material</button>
+    <div id="bom-ratio-bar-${bomIdx}-${ri}" style="margin-top:.4rem"></div>
+  </div>`;
+}
+
+function ratioInBomHtml(r, bomIdx, ri, rj) {
+  return `<div class="bom-ratio-row" style="display:grid;grid-template-columns:1fr 70px 60px 28px;gap:.3rem;margin-bottom:.3rem" id="bom-ratio-${bomIdx}-${ri}-${rj}">
+    <input class="ei" value="${esc(r.name||'')}" placeholder="e.g. Copolymer M44" oninput="updateBomRatioBar(${bomIdx},${ri})">
+    <input class="ei" value="${esc(r.qty||'1')}" placeholder="3" oninput="updateBomRatioBar(${bomIdx},${ri})" style="font-family:monospace">
+    <span id="bom-rpct-${bomIdx}-${ri}-${rj}" style="font-size:.72rem;color:var(--muted);padding:.38rem .1rem;font-family:monospace"></span>
+    <button class="del-btn" onclick="delBomRatioRow(${bomIdx},${ri},${rj})">✕</button>
+  </div>`;
+}
+
+function addBomRow() {
+  const c = document.getElementById('bom-rows');
+  const i = c.querySelectorAll('.bom-component').length;
+  const d = document.createElement('div');
+  d.innerHTML = bomRowHtml({}, i);
+  c.appendChild(d.firstElementChild);
+}
+function delBomRow(i) { const el = document.getElementById('bom-' + i); if (el) el.remove(); }
+function addBomRecipe(bomIdx) {
+  const c  = document.getElementById('bom-recipes-' + bomIdx);
+  const ri = c.children.length;
+  const d  = document.createElement('div');
+  d.innerHTML = recipeBlockHtml({ name: 'Recipe ' + (ri + 1), ratios: [{name:'',qty:'1'}] }, bomIdx, ri);
+  c.appendChild(d.firstElementChild);
+}
+function delBomRecipe(bomIdx, ri) { const el = document.getElementById('bom-recipe-'+bomIdx+'-'+ri); if (el) el.remove(); }
+
+function addBomRatioRow(bomIdx, ri) {
+  const c  = document.getElementById('bom-ratios-' + bomIdx + '-' + ri);
+  const rj = c.children.length;
+  const d  = document.createElement('div');
+  d.innerHTML = ratioInBomHtml({name:'',qty:'1'}, bomIdx, ri, rj);
+  c.appendChild(d.firstElementChild);
+  updateBomRatioBar(bomIdx, ri);
+}
+function delBomRatioRow(bomIdx, ri, rj) { const el = document.getElementById('bom-ratio-'+bomIdx+'-'+ri+'-'+rj); if (el) el.remove(); updateBomRatioBar(bomIdx, ri); }
+
+function updateBomRatioBar(bomIdx, ri) {
+  const COLORS = ['#4a90d9','#e2a83a','#5cb85c','#d9534f','#9b59b6','#1abc9c'];
+  const rows   = [...document.querySelectorAll('[id^="bom-ratio-'+bomIdx+'-'+ri+'-"]')];
+  const data   = rows.map(el => { const ins = el.querySelectorAll('input'); return { name: ins[0]?.value, qty: parseFloat(ins[1]?.value)||0 }; });
+  const total  = data.reduce((a, r) => a + r.qty, 0);
+  data.forEach((r, rj) => { const pct = total ? Math.round(r.qty/total*100) : 0; const el = document.getElementById('bom-rpct-'+bomIdx+'-'+ri+'-'+rj); if (el) el.textContent = pct+'%'; });
+  const bars   = data.map((r, rj) => `<div style="flex:${r.qty||1};background:${COLORS[rj%COLORS.length]}" title="${r.name||'?'}"></div>`).join('');
+  const bar    = document.getElementById('bom-ratio-bar-'+bomIdx+'-'+ri);
+  if (bar) bar.innerHTML = data.length ? `<div class="ratio-bar">${bars}</div>` : '';
+}
+
+function stepRowHtml(s, i) { return `<div style="display:flex;gap:.4rem;margin-bottom:.35rem" id="sr-${i}"><span style="font-size:.72rem;color:var(--muted);padding:.4rem .15rem;min-width:20px">${i+1}.</span><input class="ei" value="${esc(s)}" placeholder="Step ${i+1}" style="flex:1"><button class="del-btn" onclick="delStep(${i})">✕</button></div>`; }
+function revRowHtml(r, i)  { return `<div style="display:grid;grid-template-columns:50px 105px 1fr 110px 28px;gap:.3rem;margin-bottom:.3rem" id="rvr-${i}"><input class="ei" value="${esc(r.rev)}" placeholder="0"><input class="ei" type="date" value="${esc(r.date)}"><input class="ei" value="${esc(r.desc)}" placeholder="Change description"><input class="ei" value="${esc(r.by)}" placeholder="Approved by"><button class="del-btn" onclick="delRev(${i})">✕</button></div>`; }
+function addStep() { const c = document.getElementById('step-rows'); const i = c.children.length; const d = document.createElement('div'); d.innerHTML = stepRowHtml('', i); c.appendChild(d.firstElementChild); }
+function delStep(i) { const el = document.getElementById('sr-'+i); if (el) el.remove(); }
+function addRev()  { const c = document.getElementById('rev-rows'); const i = c.children.length; const d = document.createElement('div'); d.innerHTML = revRowHtml({rev:'',date:new Date().toISOString().slice(0,10),desc:'',by:SESSION.username},i); c.appendChild(d.firstElementChild); }
+function delRev(i) { const el = document.getElementById('rvr-'+i); if (el) el.remove(); }
+
+// ── MOULD SEARCH / LINK ───────────────────────────────────────────────────────
+
+function searchDPRow(q, bomIdx) {
+  const dd = document.getElementById('dp-dd-' + bomIdx);
+  if (!q || q.length < 1) { dd.style.display = 'none'; return; }
+  const ql = q.toLowerCase();
+  const matches = MOULDS.map((m, i) => ({m, i})).filter(({m}) =>
+    (m.n  && m.n.includes(q)) ||
+    (m.mc && m.mc.toLowerCase().includes(ql)) ||
+    (m.g  && m.g.toLowerCase().includes(ql))
+  ).slice(0, 20);
+  if (!matches.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = matches.map(({m, i}) =>
+    `<div class="dp-opt" onclick="selectDPRow(${i},${bomIdx})"><span class="dp-opt-name">${esc(m.n)}</span><span class="dp-opt-meta">${esc(m.mc)} · ${esc(m.g)} · ct:${m.ct}s pc:${m.pc}</span></div>`
+  ).join('');
+  dd.style.display = 'block';
+}
+
+function selectDPRow(dpIdx, bomIdx) {
+  const m = MOULDS[dpIdx];
+  document.getElementById('dp-search-' + bomIdx).value = '';
+  document.getElementById('dp-dd-' + bomIdx).style.display = 'none';
+  const el = document.getElementById('bom-' + bomIdx);
+  if (!el) return;
+  const newRow = {
+    _dpIdx:      dpIdx,
+    mouldName:   m.mc || m.n,
+    cycleTime:   m.ct,
+    piecesCycle: m.pc,
+    machines:    m.machines || [],
+    colours:     m.colours  || [],
+    materialRatios: m.mat ? [{name:m.mat,qty:'1'}] : [],
+  };
+  const d = document.createElement('div');
+  d.innerHTML = bomRowHtml(newRow, bomIdx);
+  const newEl = d.firstElementChild;
+  newEl.setAttribute('data-dpidx', String(dpIdx));
+  el.replaceWith(newEl);
+  showToast('Linked: ' + m.n);
+}
+
+function unlinkBomRow(bomIdx) {
+  const el = document.getElementById('bom-' + bomIdx);
+  if (!el) return;
+  const d = document.createElement('div');
+  d.innerHTML = bomRowHtml({}, bomIdx);
+  el.replaceWith(d.firstElementChild);
+}
+
+function readBomRows() {
+  const COLORS = ['#4a90d9','#e2a83a','#5cb85c','#d9534f','#9b59b6','#1abc9c'];
+  const rows = [];
+  document.querySelectorAll('.bom-component').forEach((el, i) => {
+    const recipeEls = [...el.querySelectorAll('.bom-recipe-block')];
+    const recipes = recipeEls.map((rel, ri) => {
+      const nameEl = rel.querySelector('[id^="bom-recipe-name-"]');
+      const name   = nameEl?.value || ('Recipe ' + (ri + 1));
+      const ratios = [...rel.querySelectorAll('.bom-ratio-row')].map((rrel, rj) => {
+        const ins = rrel.querySelectorAll('input');
+        return { name: ins[0]?.value||'', qty: ins[1]?.value||'1', color: COLORS[rj%COLORS.length] };
+      }).filter(r => r.name);
+      return { name, ratios };
+    }).filter(rec => rec.ratios.length > 0);
+    const dpIdxStr = el.getAttribute('data-dpidx');
+    const dpIdx    = dpIdxStr !== '' && dpIdxStr !== null ? parseInt(dpIdxStr) : undefined;
+    rows.push({
+      _dpIdx:      dpIdx,
+      mouldName:   document.getElementById('bom-mould-'+i)?.value    || '',
+      cycleTime:   document.getElementById('bom-ct-'+i)?.value       || '',
+      piecesCycle: document.getElementById('bom-pc-'+i)?.value       || '',
+      partWeight:  document.getElementById('bom-weight-'+i)?.value   || '',
+      machines:    (document.getElementById('bom-machines-'+i)?.value || '').split(',').map(s=>s.trim()).filter(Boolean),
+      colours:     (document.getElementById('bom-colours-'+i)?.value  || '').split(',').map(s=>s.trim()).filter(Boolean),
+      recipes,
+    });
+  });
+  return rows;
+}
+
+// ── MISC EDIT HELPERS ─────────────────────────────────────────────────────────
+
+function updateSubcats() {
+  const cat = document.getElementById('e_category')?.value;
+  const sel = document.getElementById('e_subcategory');
+  if (!sel) return;
+  sel.innerHTML = (SUBS_BY_CAT[cat]||[]).map(x => '<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+}
+
+function handleImgUpload(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const max = 500; let w = img.width, h = img.height;
+      if (w > h) { if (w > max) { h = Math.round(h*max/w); w = max; } }
+      else        { if (h > max) { w = Math.round(w*max/h); h = max; } }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      let data; try { data = c.toDataURL('image/jpeg', 0.82); } catch(e) { data = ev.target.result; }
+      const hid = document.getElementById('e_image_data'); if (hid) hid.value = data;
+      const pv  = document.getElementById('e_img_prev');  if (pv)  pv.innerHTML = `<img src="${data}" style="width:100%;height:100%;object-fit:contain">`;
+      unsaved = true;
+    };
+    img.src = ev.target.result;
+  };
+  rd.readAsDataURL(f);
+}
+
+function clearProdImg() {
+  const hid = document.getElementById('e_image_data'); if (hid) hid.value = '';
+  const pv  = document.getElementById('e_img_prev');  if (pv)  pv.innerHTML = '<span style="font-size:1.6rem">🖼️</span>';
+  unsaved = true;
+}
+
+// ── SAVE EDIT ─────────────────────────────────────────────────────────────────
+
+async function saveEdit() {
+  const bom   = readBomRows();
+  const steps = [...document.querySelectorAll('[id^="sr-"]')].map(el => el.querySelector('input')?.value||'').filter(Boolean);
+  const revs  = [...document.querySelectorAll('[id^="rvr-"]')].map(el => {
+    const ins = el.querySelectorAll('input');
+    return { rev: ins[0]?.value, date: ins[1]?.value, desc: ins[2]?.value, by: ins[3]?.value };
+  }).filter(r => r.rev || r.desc);
+
+  const pr = getProfile(currentPid);
+  const p0 = allProducts.find(x => x.id === currentPid);
+  const [ar] = findBC(p0);
+
+  const enVal      = (document.getElementById('e_en_name')?.value || '').trim();
+  const arVal      = (document.getElementById('e_ar_name')?.value || '').trim();
+  const codeVal    = (document.getElementById('e_code')?.value    || '').trim();
+  const barcodeVal = (document.getElementById('e_barcode')?.value || '').trim();
+  const catVal     = (document.getElementById('e_category')?.value || '').trim();
+  const subVal     = (document.getElementById('e_subcategory')?.value || '').trim();
+  const imgVal     = document.getElementById('e_image_data')?.value || '';
+
+  const baseEn  = (p0 && p0._origEn  !== undefined) ? p0._origEn  : (p0 ? p0.en  : '');
+  const baseCat = (p0 && p0._origCat !== undefined) ? p0._origCat : (p0 ? p0.cat : '');
+  const baseSub = (p0 && p0._origSub !== undefined) ? p0._origSub : (p0 ? p0.sub : '');
+
+  const idOverrides = {};
+  if (enVal      && enVal  !== baseEn)  idOverrides._enName        = enVal;
+  if (arVal)                            idOverrides._arName         = arVal;
+  if (codeVal)                          idOverrides._codeOverride   = codeVal;
+  if (barcodeVal)                       idOverrides._barcodeOverride = barcodeVal;
+  if (catVal     && catVal !== baseCat) idOverrides._catOverride    = catVal;
+  if (subVal     && subVal !== baseSub) idOverrides._subOverride    = subVal;
+
+  const data = {
+    ...pr,
+    ...idOverrides,
+    notes:       document.getElementById('e_notes')?.value      || '',
+    weight:      document.getElementById('e_weight')?.value     || '',
+    dimensions:  document.getElementById('e_dims')?.value       || '',
+    volume:      document.getElementById('e_volume')?.value     || '',
+    bom,
+    packaging: {
+      inner:        document.getElementById('e_pkg_inner')?.value  || '',
+      carton:       document.getElementById('e_pkg_carton')?.value || '',
+      pallet:       document.getElementById('e_pkg_pallet')?.value || '',
+      unitsPerPallet: document.getElementById('e_pkg_units')?.value || '',
+    },
+    quality: {
+      dimTol:     document.getElementById('e_q_dim')?.value  || '',
+      visual:     document.getElementById('e_q_vis')?.value  || '',
+      functional: document.getElementById('e_q_func')?.value || '',
+    },
+    assemblySteps: steps,
+    revisions:     revs,
+    _lastEditBy:   SESSION.username,
+    _lastEditAt:   new Date().toISOString(),
+  };
+  if (imgVal) data._image = imgVal; else delete data._image;
+
+  setSyncStatus('saving', 'Saving…');
+  try {
+    await saveProfile(currentPid, data);
+    setSyncStatus('ok', 'Saved ✓');
+  } catch (e) {
+    setSyncStatus('error', 'Save failed');
+    showToast('Save failed: ' + e.message);
+    return;
+  }
+
+  applyOverrides();
+  const pName = allProducts.find(x => x.id === currentPid)?.en || currentPid;
+  logActivity('edited profile', pName);
+  unsaved = false; editMode = false;
+  document.getElementById('edit-btn').textContent = '✏ Edit';
+  document.getElementById('edit-btn').classList.remove('active');
+  renderView(currentPid); buildCatList(); updateCounts(); renderGrid();
+  showToast('✓ Profile saved');
+}
+
+// ── TRASH / RESTORE / PERM DELETE ────────────────────────────────────────────
+
+function trashProduct() {
+  showConfirm('Move to trash?', 'This product will be moved to the trash bin. You can restore it later.', async () => {
+    const pr = getProfile(currentPid);
+    try {
+      await saveProfile(currentPid, { ...pr, _trashed: true, _trashedBy: SESSION.username, _trashedAt: new Date().toISOString() });
+      logActivity('moved to trash', allProducts.find(x => x.id === currentPid)?.en || currentPid);
+      closePanel(); buildCatList(); updateCounts(); renderGrid(); showToast('Moved to trash');
+    } catch (e) { showToast('Error: ' + e.message); }
+  });
+}
+
+async function restoreProduct() {
+  const pr = getProfile(currentPid);
+  try {
+    await saveProfile(currentPid, { ...pr, _trashed: false, _trashedBy: null, _trashedAt: null });
+    logActivity('restored from trash', allProducts.find(x => x.id === currentPid)?.en || currentPid);
+    closePanel(); buildCatList(); updateCounts(); renderGrid(); showToast('Restored');
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+
+function permDeleteProduct() {
+  showConfirm('Permanently delete?', 'This cannot be undone. The product will be gone forever.', async () => {
+    try {
+      await dbDeleteProduct(String(currentPid));
+      await dbDeleteOverride(String(currentPid));
+      allProducts = allProducts.filter(p => p.id !== currentPid);
+      delete overridesMap[String(currentPid)];
+      logActivity('permanently deleted', currentPid);
+      localStorage.removeItem(CACHE_KEY);
+      closePanel(); buildCatList(); updateCounts(); renderGrid(); showToast('Permanently deleted');
+    } catch (e) { showToast('Delete failed: ' + e.message); }
+  });
+}
+
+// ── ADD PRODUCT ───────────────────────────────────────────────────────────────
+
+function openAddProduct() { document.getElementById('add-modal').classList.add('open'); }
+
+async function saveNewProduct() {
+  const name = document.getElementById('np-name').value.trim();
+  if (!name) { alert('Product name is required.'); return; }
+  const cat     = document.getElementById('np-cat').value;
+  const sub     = document.getElementById('np-sub').value || cat;
+  const code    = document.getElementById('np-code').value.trim();
+  const barcode = document.getElementById('np-barcode').value.trim();
+  const ar      = document.getElementById('np-ar').value.trim();
+  const newId   = 'c' + Date.now();
+  try {
+    await dbInsertProduct({ id: newId, name, name_ar: ar||null, category: cat, subcategory: sub, internal_code: code||null, barcode: barcode||null, active: true });
+    allProducts.push({ id: newId, name, name_ar: ar||null, category: cat, subcategory: sub, barcode: barcode||null, internal_code: code||null, image_url: null, en: name, cat, sub });
+    logActivity('added new product', name);
+    localStorage.removeItem(CACHE_KEY);
+    closeModal('add-modal');
+    buildCatList(); updateCounts(); renderGrid();
+    showToast('Product created');
+    ['np-name','np-sub','np-code','np-barcode','np-ar'].forEach(id => { document.getElementById(id).value = ''; });
+  } catch (e) { alert('Failed to create product: ' + e.message); }
+}
+
+// ── ACTIVITY LOG ──────────────────────────────────────────────────────────────
+
+function logActivity(action, target) {
+  dbLogActivity(SESSION?.id, action, null, String(target), null);
+}
+
+async function openLog() {
+  const el = document.getElementById('log-list');
+  el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.82rem">Loading…</div>';
+  document.getElementById('log-modal').classList.add('open');
+  try {
+    const logs = await dbGetActivityLog();
+    if (!logs.length) {
+      el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.82rem">No activity yet.</div>';
+      return;
+    }
+    el.innerHTML = logs.map(l => {
+      const user = l.users?.username || 'system';
+      return `<div class="log-row"><span class="log-user">${esc(user)}</span><span class="log-action">${esc(l.action)} — <em>${esc(l.entity_id||'')}</em></span><span class="log-time">${new Date(l.created_at).toLocaleString('en-GB')}</span></div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="padding:1rem;color:var(--red)">Failed to load log: ' + esc(e.message) + '</div>';
+  }
+}
+
+// ── SETTINGS / USER MANAGEMENT ────────────────────────────────────────────────
+
+async function openSettings() {
+  document.getElementById('settings-panel').classList.add('open');
+  await renderUsersList();
+}
+function closeSettings() { document.getElementById('settings-panel').classList.remove('open'); }
+
+async function renderUsersList() {
+  try {
+    const users = await dbGetUsers();
+    document.getElementById('users-list').innerHTML = users.map(u => `<div class="user-row">
+      <div class="user-name">${esc(u.username)}</div>
+      <span class="user-role ${u.role==='admin'?'role-admin':'role-viewer'}">${u.role}</span>
+      ${u.username !== SESSION.username
+        ? `<button class="toggle-role" onclick="toggleUserRole(${u.id},'${u.role}')">Toggle role</button><button class="del-user-btn" onclick="deleteUser(${u.id},'${esc(u.username)}')">Remove</button>`
+        : '<span style="font-size:.7rem;color:var(--muted)">(you)</span>'}
+    </div>`).join('');
+  } catch (e) {
+    document.getElementById('users-list').innerHTML = '<div style="color:var(--red);font-size:.8rem">Failed to load users: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function toggleUserRole(userId, currentRole) {
+  const newRole = currentRole === 'admin' ? 'viewer' : 'admin';
+  await dbUpdateUser(userId, { role: newRole });
+  logActivity('changed role', 'user ' + userId + ' → ' + newRole);
+  renderUsersList();
+  showToast('Role updated');
+}
+
+async function deleteUser(userId, username) {
+  if (!confirm('Remove user ' + username + '?')) return;
+  await dbDeleteUser(userId);
+  logActivity('removed user', username);
+  renderUsersList();
+  showToast('User removed');
+}
+
+async function addUser() {
+  const uname = document.getElementById('new-username').value.trim().toLowerCase();
+  const pw    = document.getElementById('new-password').value;
+  const role  = document.getElementById('new-role').value;
+  if (!uname || !pw) { alert('Username and password required.'); return; }
+  const h = await sha256(pw);
+  try {
+    await dbCreateUser({ username: uname, password_hash: h, role, active: true });
+    document.getElementById('new-username').value = '';
+    document.getElementById('new-password').value = '';
+    await renderUsersList();
+    logActivity('added user', uname + ' (' + role + ')');
+    showToast('User added: ' + uname);
+  } catch (e) {
+    if (e.message.includes('23505')) alert('Username already exists.');
+    else alert('Failed to create user: ' + e.message);
+  }
+}
+
+// ── PRINT ─────────────────────────────────────────────────────────────────────
+
+function openPrint() {
+  const id = currentPid;
+  const p  = allProducts.find(x => x.id === id);
+  const [ar, d] = findBC(p);
+  const pr = getProfile(id);
+  const today = new Date().toLocaleDateString('en-GB');
+  const bom   = pr.bom || [];
+  const mData = (bom[0]?._dpIdx !== undefined ? MOULDS[bom[0]._dpIdx] : null) || {};
+  const _printRecipes = normRecipes(bom[0] || {}, mData);
+  const ratios   = _printRecipes[0]?.ratios || [];
+  const total    = ratios.reduce((a, r) => a + (parseFloat(r.qty)||0), 0);
+  const colours  = bom[0]?.colours  || mData.colours  || [];
+  const machines = bom[0]?.machines || mData.machines || [];
+  const imgUrl2  = imgUrl(id, 530);
+  const rev      = ((pr.revisions||[]).slice(-1)[0]||{}).rev || '0';
+
+  let html = `<div class="pc-hdr">
+    ${imgUrl2 ? `<img src="${imgUrl2}" style="float:right;width:35mm;height:35mm;object-fit:contain;border:1pt solid #ddd;border-radius:3pt;margin-left:8mm">` : ''}
+    <div>
+      <div class="pc-logo">Al Watania <span style="color:#111">Plast</span></div>
+      <div class="pc-title">${esc(p.en)}</div>
+      <div style="font-size:8.5pt;color:#666;display:flex;gap:.8rem;flex-wrap:wrap">
+        <span>${esc(p.cat)} › ${esc(p.sub)}</span>
+        ${ar ? `<span>AR: ${esc(ar)}</span>` : ''}
+        <span>ID: #${id}</span>
+      </div>
+    </div>
+    <div style="text-align:right;font-size:8.5pt;color:#666;flex-shrink:0">
+      <div style="font-weight:700;font-size:10pt;color:#c94c28">Product Profile</div>
+      <div>Date: ${today}</div><div>Rev: ${rev}</div><div>By: ${SESSION.username}</div>
+    </div>
+  </div>`;
+
+  html += `<div class="pc-grid2">
+    <div class="pc-sec"><div class="pc-sec-title">Identification</div><table class="pc-tbl">
+      ${d ? d.codes.map((c, i) => `<tr><td>Code</td><td style="font-family:monospace">${c}</td></tr><tr><td>Barcode</td><td style="font-family:monospace">${(d.bc||[])[i]||''}</td></tr>`).join('') : '<tr><td colspan="2" class="pnf">No barcode data</td></tr>'}
+    </table></div>
+    <div class="pc-sec"><div class="pc-sec-title">Specifications</div><table class="pc-tbl">
+      <tr><td>Weight</td><td>${pr.weight||'<span class="pnf">—</span>'} kg</td></tr>
+      <tr><td>Dimensions</td><td>${pr.dimensions||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Volume</td><td>${pr.volume||'<span class="pnf">—</span>'} cm³</td></tr>
+    </table></div>
+  </div>`;
+
+  if (bom.length > 0) {
+    html += `<div class="pc-sec"><div class="pc-sec-title">Production data</div>
+      <div class="pc-grid2">
+        <div class="pc-box"><div class="pc-box-lbl">Mould name</div><div class="pc-box-val">${esc(bom[0]?.mouldName||mData.mc||mData.n||'—')}</div></div>
+        <div class="pc-box"><div class="pc-box-lbl">Cycle time</div><div class="pc-box-val">${esc(bom[0]?.cycleTime||mData.ct||'—')}s</div></div>
+        <div class="pc-box"><div class="pc-box-lbl">Pieces / cycle</div><div class="pc-box-val">${esc(bom[0]?.piecesCycle||mData.pc||'—')}</div></div>
+        <div class="pc-box"><div class="pc-box-lbl">Part weight</div><div class="pc-box-val">${bom[0]?.partWeight?bom[0].partWeight+' kg':'—'}</div></div>
+        <div class="pc-box"><div class="pc-box-lbl">Machines</div><div class="pc-box-val" style="font-size:.85rem">${machines.length?machines.join(', '):'—'}</div></div>
+      </div>
+      ${ratios.length ? `<div style="margin-top:3mm"><div class="pc-box-lbl" style="margin-bottom:1.5mm">Material mix</div>${ratios.map(r=>{const pct=total?Math.round((parseFloat(r.qty)||0)/total*100):0;return`<div style="font-size:8pt;margin-bottom:1mm">${esc(r.name)} — ratio ${esc(r.qty)} (${pct}%)</div>`;}).join('')}</div>` : ''}
+      ${colours.length ? `<div style="margin-top:2mm"><div class="pc-box-lbl">Colours</div><div style="font-size:8pt">${colours.map(c=>esc(c)).join(', ')}</div></div>` : ''}
+    </div>`;
+  }
+
+  const pkg = pr.packaging || {};
+  html += `<div class="pc-grid2">
+    <div class="pc-sec"><div class="pc-sec-title">Packaging</div><table class="pc-tbl">
+      <tr><td>Inner</td><td>${pkg.inner||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Carton</td><td>${pkg.carton||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Pallet</td><td>${pkg.pallet||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Units/pallet</td><td>${pkg.unitsPerPallet||'<span class="pnf">—</span>'}</td></tr>
+    </table></div>
+    <div class="pc-sec"><div class="pc-sec-title">Quality</div><table class="pc-tbl">
+      <tr><td>Tolerances</td><td>${(pr.quality||{}).dimTol||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Visual</td><td>${(pr.quality||{}).visual||'<span class="pnf">—</span>'}</td></tr>
+      <tr><td>Functional</td><td>${(pr.quality||{}).functional||'<span class="pnf">—</span>'}</td></tr>
+    </table></div>
+  </div>`;
+
+  const printSteps = pr.assemblySteps || [];
+  if (printSteps.length) html += `<div class="pc-sec"><div class="pc-sec-title">Assembly steps</div><ol style="padding-left:10pt;font-size:8.5pt;line-height:1.6">${printSteps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol></div>`;
+
+  const printRevs = pr.revisions || [];
+  html += `<div class="pc-sec"><div class="pc-sec-title">Revision history</div><table class="pc-tbl"><thead><tr><th>Rev</th><th>Date</th><th>Description</th><th>Approved by</th></tr></thead><tbody>${printRevs.length?printRevs.map(r=>`<tr><td>${esc(r.rev)}</td><td>${esc(r.date)}</td><td>${esc(r.desc)}</td><td>${esc(r.by)}</td></tr>`).join(''):'<tr><td>0</td><td>'+today+'</td><td>Initial</td><td>'+esc(SESSION.username)+'</td></tr>'}</tbody></table></div>`;
+
+  html += `<div class="pc-footer"><span>Al Watania Plast — Product Profile System</span><span>${esc(p.cat)}</span><span>Printed: ${today}</span></div>`;
+
+  document.getElementById('print-card').innerHTML = html;
+  document.getElementById('print-overlay').classList.add('open');
+}
+function closePrint() { document.getElementById('print-overlay').classList.remove('open'); }
+
+// ── MODAL / TOAST / CONFIRM ───────────────────────────────────────────────────
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showConfirm(title, msg, onOk) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent   = msg;
+  document.getElementById('confirm-ok').onclick = () => { closeModal('confirm-modal'); onOk(); };
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function showToast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2200);
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+
+function toggleSidebar() {
+  const app       = document.getElementById('app');
+  const collapsed = app.classList.toggle('sb-collapsed');
+  const btn       = document.getElementById('sb-toggle');
+  btn.textContent = collapsed ? '▶' : '☰';
+  btn.title       = collapsed ? 'Show sidebar' : 'Hide sidebar';
+  localStorage.setItem('awp_sb_collapsed', collapsed ? '1' : '0');
+}
+function restoreSidebarState() {
+  if (localStorage.getItem('awp_sb_collapsed') === '1') {
+    document.getElementById('app').classList.add('sb-collapsed');
+    const btn = document.getElementById('sb-toggle');
+    if (btn) { btn.textContent = '▶'; btn.title = 'Show sidebar'; }
+  }
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+
+initAuth(showApp, () => {
+  // CSS defaults already show login-screen and hide #app — nothing extra needed
+});
+</script>
+</body>
+</html>
