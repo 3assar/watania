@@ -5,7 +5,13 @@ async function sha256(msg) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-let SESSION = null; // { id, username, role }
+const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 hours
+
+let SESSION = null; // { id, username, role, loginAt }
+
+function sessionExpired(s) {
+  return !s || !s.loginAt || (Date.now() - s.loginAt) > SESSION_TTL;
+}
 
 function getSession() {
   if (SESSION) return SESSION;
@@ -17,10 +23,14 @@ function getSession() {
 }
 
 async function initAuth(onSuccess, onReady) {
-  // Restore existing session
+  // Restore existing session — clear it if expired
   const saved = localStorage.getItem('awp_session');
   if (saved) {
     try { SESSION = JSON.parse(saved); } catch {}
+    if (SESSION && sessionExpired(SESSION)) {
+      SESSION = null;
+      localStorage.removeItem('awp_session');
+    }
     if (SESSION) { onSuccess(); return; }
   }
   // Ensure default admin user exists in Supabase
@@ -68,7 +78,7 @@ async function doLogin() {
       return;
     }
 
-    SESSION = { id: data.id, username: data.username, role: data.role };
+    SESSION = { id: data.id, username: data.username, role: data.role, loginAt: Date.now() };
     localStorage.setItem('awp_session', JSON.stringify(SESSION));
     showApp();
   } catch (e) {
