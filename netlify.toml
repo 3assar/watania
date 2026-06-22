@@ -1,3 +1,7 @@
 [[edge_functions]]
   path = "/api/profiles"
   function = "profiles"
+
+[[edge_functions]]
+  path = "/api/login"
+  function = "login"

@@ -55,17 +55,20 @@ async function doLogin() {
   errEl.textContent = '';
 
   try {
-    const h = await sha256(password);
-    const users = await dbGetUsersWithHash();
-    const user = users.find(u => u.username.toLowerCase() === username && u.password_hash === h);
+    const res  = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
 
-    if (!user) {
-      errEl.textContent = 'Invalid credentials.';
+    if (!res.ok || data.error) {
+      errEl.textContent = data.error || 'Invalid credentials.';
       pEl.value = '';
       return;
     }
 
-    SESSION = { id: user.id, username: user.username, role: user.role };
+    SESSION = { id: data.id, username: data.username, role: data.role };
     localStorage.setItem('awp_session', JSON.stringify(SESSION));
     showApp();
   } catch (e) {

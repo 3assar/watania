@@ -93,10 +93,6 @@ async function dbGetUsers() {
   return SB.fetch('/users?select=id,username,role,active&order=username');
 }
 
-async function dbGetUsersWithHash() {
-  return SB.fetch('/users?select=id,username,password_hash,role,active&active=eq.true');
-}
-
 async function dbCreateUser(data) {
   return SB.fetch('/users', {
     method: 'POST',
