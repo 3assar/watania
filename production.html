@@ -886,7 +886,13 @@ async function startWO() {
     showToast('Work order started');
     await openWOPanel(currentWoId);
     renderWOGrid(); updateCounts();
-  } catch(e) { setSyncStatus('error', 'Error'); showToast(e.message, 'error'); }
+  } catch(e) {
+    setSyncStatus('error', 'Error');
+    const msg = (e.message.includes('23505') || e.message.includes('one_running_per_machine'))
+      ? 'Machine already has a running order — pause or complete it first'
+      : e.message;
+    showToast(msg, 'error');
+  }
 }
 
 async function completeWO() {
@@ -1022,7 +1028,13 @@ async function resumeWO() {
     showToast('Order resumed');
     await openWOPanel(currentWoId);
     renderWOGrid(); updateCounts();
-  } catch(e) { setSyncStatus('error', 'Error'); showToast(e.message, 'error'); }
+  } catch(e) {
+    setSyncStatus('error', 'Error');
+    const msg = (e.message.includes('23505') || e.message.includes('one_running_per_machine'))
+      ? 'Machine already has a running order — pause or complete it first'
+      : e.message;
+    showToast(msg, 'error');
+  }
 }
 
 // ── ARCHIVE ───────────────────────────────────────────────────────────────────
@@ -1683,10 +1695,7 @@ async function submitWizard() {
 }
 
 async function genWoId() {
-  const d   = new Date();
-  const pfx = 'WO-' + d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-  const cnt = allWOs.filter(w => w.id.startsWith(pfx)).length;
-  return pfx + '-' + String(cnt + 1).padStart(3, '0');
+  return SB.fetch('/rpc/generate_work_order_id', { method: 'POST', body: '{}' });
 }
 
 // ── FLOOR VIEW ────────────────────────────────────────────────────────────────
