@@ -82,6 +82,8 @@ function doLogout() {
   location.href = 'index.html';
 }
 
-function isAdmin() { return SESSION && SESSION.role === 'admin'; }
-function canEdit() { return SESSION && (SESSION.role === 'admin' || SESSION.role === 'editor'); }
-function isSupervisor() { return SESSION && SESSION.role === 'supervisor'; }
+function isAdmin()      { return !!(SESSION && SESSION.role === 'admin'); }
+function isSupervisor() { return !!(SESSION && SESSION.role === 'supervisor'); }
+function isOperator()   { return !!(SESSION && SESSION.role === 'operator'); }
+function canEdit()      { return isAdmin() || isSupervisor(); }   // create/edit WOs + library cards
+function canAct()       { return isAdmin() || isSupervisor() || isOperator(); } // start/pause/resume/complete

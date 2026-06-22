@@ -161,6 +161,39 @@
     .frow-next{font-size:.7rem;color:var(--muted)}
     .frow-next b{color:var(--text);font-size:.72rem}
 
+    /* ── INTERACTIVE SHOP FLOOR ──────────────────────────────────────────── */
+    .machine-grid{display:flex;flex-wrap:wrap;gap:1rem;padding:.5rem 0}
+    .machine-card{background:var(--card);border:1px solid var(--border);border-radius:10px;width:330px;flex:0 0 330px;display:flex;flex-direction:column;overflow:hidden;transition:box-shadow .15s}
+    .machine-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.1)}
+    .machine-card.running{border-left:3px solid #10b981}
+    .machine-card.paused{border-left:3px solid #f59e0b}
+    .machine-card.idle{opacity:.7}
+    .mc-header{padding:.7rem .9rem .55rem;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border)}
+    .mc-name{font-size:.9rem;font-weight:700}
+    .mc-tonnage{font-size:.65rem;color:var(--muted);margin-top:.1rem}
+    .mc-badge{font-size:.68rem;font-weight:700;padding:.2rem .55rem;border-radius:20px;white-space:nowrap}
+    .mc-badge.running{color:#10b981;background:rgba(16,185,129,.12)}
+    .mc-badge.paused{color:#f59e0b;background:rgba(245,158,11,.12)}
+    .mc-badge.idle{color:#6b7280;background:rgba(107,114,128,.1)}
+    .mc-body{padding:.7rem .9rem;flex:1}
+    .mc-section-lbl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.3rem}
+    .mc-product{font-size:.9rem;font-weight:700;direction:rtl;text-align:right;line-height:1.3;margin-bottom:.12rem}
+    .mc-sub{font-size:.72rem;color:var(--muted);margin-bottom:.5rem}
+    .mc-timer{font-size:.74rem;margin:.4rem 0 .25rem}
+    .mc-timer .t-ok{color:#10b981;font-weight:600}
+    .mc-timer .t-warn{color:#f59e0b;font-weight:600}
+    .mc-timer .t-over{color:#dc2626;font-weight:700}
+    .mc-actions{display:flex;gap:.4rem;padding:.6rem .9rem;border-top:1px solid var(--border);flex-wrap:wrap;background:var(--surface)}
+    .mc-queue{padding:.55rem .9rem;background:var(--bg);border-top:1px solid var(--border)}
+    .mc-queue-hdr{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.3rem}
+    .mc-queue-row{padding:.22rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.4rem;font-size:.71rem}
+    .mc-queue-row:last-child{border-bottom:none}
+    .mc-queue-id{color:var(--muted);flex-shrink:0}
+    .mc-queue-name{direction:rtl;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+    .mc-idle-body{display:flex;align-items:center;justify-content:center;min-height:90px;padding:.7rem .9rem}
+    @media(max-width:900px){.machine-card{width:calc(50% - .5rem);flex:0 0 calc(50% - .5rem)}}
+    @media(max-width:540px){.machine-card{width:100%;flex:0 0 100%}}
+
   </style>
 </head>
 <body>
@@ -184,6 +217,7 @@
     <div class="view-tabs">
       <button class="view-tab active" id="tab-orders" onclick="switchView('orders',this)">Work Orders</button>
       <button class="view-tab" id="tab-floor"  onclick="switchView('floor',this)">Floor View</button>
+      <button class="view-tab" id="tab-sf"     onclick="switchView('floor-interactive',this)">Shop Floor</button>
     </div>
     <div class="search-wrap" id="search-wrap">
       <svg class="si" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="17" y2="17"/></svg>
@@ -382,6 +416,7 @@ let searchQ       = '';
 let currentWoId   = null;
 let _pendingCompleteData = null;
 let _timerInterval = null;
+let _floorInterval = null;
 
 // Wizard
 let wizardStep = 1;
@@ -411,6 +446,7 @@ function getOv(pid)       { return overridesMap[String(pid)] || {}; }
 function machineSector(m) { return m ? (m.sector || m.name?.[0] || '') : ''; }
 function woSector(wo)     { return machineSector(machineById(wo.machine_id)); }
 function fmtDate(d)       { return d ? new Date(d).toLocaleDateString('en-GB') : '—'; }
+function fmtH(ms)         { const h = Math.floor(ms/3_600_000), m = Math.floor((ms%3_600_000)/60000); return `${h}h ${m}m`; }
 function normBomRecipes(row) {
   if (row.recipes?.length) return row.recipes;
   if (row.materialRatios?.length) return [{ name: 'Default', ratios: row.materialRatios }];
@@ -456,7 +492,16 @@ function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
   document.getElementById('user-badge').textContent = SESSION.username + ' (' + SESSION.role + ')';
-  if (canEdit() || isSupervisor()) document.getElementById('new-wo-btn').style.display = '';
+  if (canEdit()) document.getElementById('new-wo-btn').style.display = '';
+  if (isOperator()) {
+    // Operators only get the Shop Floor tab — hide everything else
+    document.getElementById('tab-orders').style.display = 'none';
+    document.getElementById('tab-floor').style.display  = 'none';
+    document.getElementById('new-wo-btn').style.display = 'none';
+    document.getElementById('search-wrap').style.display = 'none';
+    const libLink = document.querySelector('a[href="library.html"]');
+    if (libLink) libLink.style.display = 'none';
+  }
   init();
 }
 
@@ -482,6 +527,10 @@ async function init() {
     renderWOGrid();
     updateCounts();
     setSyncStatus('ok', 'Synced');
+    if (isOperator()) {
+      const sfTab = document.getElementById('tab-sf');
+      if (sfTab) switchView('floor-interactive', sfTab);
+    }
   } catch (e) {
     setSyncStatus('error', 'Load failed');
     console.error(e);
@@ -493,19 +542,23 @@ function setFloorSector(s, el) {
   floorSector = s;
   document.querySelectorAll('.floor-sec-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  renderFloorView();
+  if (currentView === 'floor-interactive') renderShopFloorInteractive(floorSector);
+  else renderFloorView();
 }
 
 function switchView(view, el) {
   currentView = view;
   document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
+  const isFloor = view === 'floor' || view === 'floor-interactive';
   document.getElementById('view-orders').style.display = view === 'orders' ? '' : 'none';
-  document.getElementById('view-floor').style.display  = view === 'floor'  ? '' : 'none';
-  if (view === 'floor') document.getElementById('app').classList.add('sb-collapsed');
-  else document.getElementById('app').classList.remove('sb-collapsed');
+  document.getElementById('view-floor').style.display  = isFloor           ? '' : 'none';
   document.getElementById('search-wrap').style.display = view === 'orders' ? '' : 'none';
-  if (view === 'floor') renderFloorView();
+  if (isFloor) document.getElementById('app').classList.add('sb-collapsed');
+  else         document.getElementById('app').classList.remove('sb-collapsed');
+  if (view === 'floor')             { stopFloorTimer(); renderFloorView(); }
+  if (view === 'floor-interactive') { renderShopFloorInteractive(floorSector); startFloorTimer(); }
+  if (!isFloor) stopFloorTimer();
 }
 function toggleSidebar() { document.getElementById('app').classList.toggle('sb-collapsed'); }
 
@@ -616,7 +669,6 @@ function updateTimerUI() {
   const endMs    = wo.completed_at ? new Date(wo.completed_at).getTime() : Date.now();
   const elapsed  = endMs - new Date(wo.started_at).getTime();
   const plannedH = parseFloat(wo.planned_runtime_hours) || 0;
-  const fmtH = ms => { const h = Math.floor(ms/3_600_000), m = Math.floor((ms%3_600_000)/60000); return `${h}h ${m}m`; };
 
   const elEl = document.getElementById('ts-elapsed');
   if (elEl) elEl.textContent = fmtH(elapsed);
@@ -662,24 +714,72 @@ function stopPanelTimer() {
   if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
 }
 
+// ── FLOOR TIMER ───────────────────────────────────────────────────────────────
+function startFloorTimer() {
+  stopFloorTimer();
+  _floorInterval = setInterval(updateFloorTimers, 30000);
+}
+
+function stopFloorTimer() {
+  if (_floorInterval) { clearInterval(_floorInterval); _floorInterval = null; }
+}
+
+function updateFloorTimers() {
+  if (currentView !== 'floor-interactive') { stopFloorTimer(); return; }
+  allWOs.filter(w => w.status === 'in_progress' && !w.archived).forEach(wo => {
+    const machine = machineById(wo.machine_id);
+    if (!machine) return;
+    const mid      = machine.id.replace(/-/g, '_');
+    const elapsed  = Date.now() - new Date(wo.started_at).getTime();
+    const plannedH = parseFloat(wo.planned_runtime_hours) || 0;
+    const timerEl  = document.getElementById('sf-timer-' + mid);
+    if (!timerEl) return;
+    if (plannedH) {
+      const plannedMs = plannedH * 3_600_000;
+      const timeOver  = elapsed > plannedMs;
+      const timePct   = Math.min(100, Math.round((elapsed / plannedMs) * 100));
+      const cls       = timeOver ? 't-over' : timePct > 90 ? 't-warn' : 't-ok';
+      const diffMs    = Math.abs(elapsed - plannedMs);
+      const lbl       = timeOver ? 'over by' : 'left';
+      timerEl.innerHTML = `<span class="${cls}">${fmtH(elapsed)}</span> elapsed · ${fmtH(plannedMs)} planned · <span class="${cls}">${fmtH(diffMs)} ${lbl}</span>`;
+      const fillEl = document.getElementById('sf-prog-' + mid);
+      if (fillEl) {
+        fillEl.style.width      = timePct + '%';
+        fillEl.style.background = timeOver ? '#dc2626' : timePct > 90 ? '#f59e0b' : 'var(--accent2)';
+      }
+    } else {
+      timerEl.innerHTML = `<span class="t-ok">${fmtH(elapsed)}</span> elapsed`;
+    }
+  });
+}
+
+// ── SHOP FLOOR ACTION WRAPPER ─────────────────────────────────────────────────
+function sfAction(woId, action) {
+  currentWoId = woId;
+  if (action === 'pause')    openPauseModal();
+  if (action === 'resume')   resumeWO();
+  if (action === 'complete') completeWO();
+  if (action === 'delete')   deleteWO();
+}
+
 // ── WO DETAIL PANEL ───────────────────────────────────────────────────────────
 async function openWOPanel(id) {
   currentWoId = id;
   const wo = allWOs.find(w => w.id === id);
   if (!wo) return;
   document.getElementById('wp-title').textContent = wo.id;
-  const canAct   = canEdit() || isSupervisor();
+  const actAllowed = canAct();
   const active   = !wo.archived;
   const running  = wo.status === 'in_progress';
   const isPaused = wo.status === 'paused';
   const isDone   = wo.status === 'completed';
-  document.getElementById('wp-start-btn').style.display   = (canAct && active && wo.status === 'planned') ? '' : 'none';
-  document.getElementById('wp-done-btn').style.display    = (canAct && active && !isDone)                 ? '' : 'none';
-  document.getElementById('wp-pause-btn').style.display   = (canAct && active && running)                 ? '' : 'none';
-  document.getElementById('wp-resume-btn').style.display  = (canAct && active && isPaused)                ? '' : 'none';
-  document.getElementById('wp-edit-btn').style.display    = (canAct && active && !isDone)                 ? '' : 'none';
-  document.getElementById('wp-archive-btn').style.display = (canAct && isDone && active)                  ? '' : 'none';
-  document.getElementById('wp-del-btn').style.display     = (canEdit() || isSupervisor())                 ? '' : 'none';
+  document.getElementById('wp-start-btn').style.display   = (actAllowed && active && wo.status === 'planned') ? '' : 'none';
+  document.getElementById('wp-done-btn').style.display    = (actAllowed && active && !isDone)                 ? '' : 'none';
+  document.getElementById('wp-pause-btn').style.display   = (actAllowed && active && running)                 ? '' : 'none';
+  document.getElementById('wp-resume-btn').style.display  = (actAllowed && active && isPaused)                ? '' : 'none';
+  document.getElementById('wp-edit-btn').style.display    = (canEdit() && active && !isDone)                  ? '' : 'none';
+  document.getElementById('wp-archive-btn').style.display = (canEdit() && isDone && active)                   ? '' : 'none';
+  document.getElementById('wp-del-btn').style.display     = (isAdmin() || isSupervisor())                     ? '' : 'none';
 
   let logs = [], pauseLogs = [];
   try { logs = await dbGetShiftLogs(id); } catch(e) {}
@@ -695,6 +795,7 @@ function closeWOPanel() {
   currentWoId = null;
   document.getElementById('wo-panel').classList.remove('open');
   document.getElementById('overlay').classList.remove('open');
+  if (currentView === 'floor-interactive') renderShopFloorInteractive(floorSector);
 }
 
 function buildWODetailHtml(wo, logs, pauseLogs = []) {
@@ -1696,6 +1797,149 @@ async function submitWizard() {
 
 async function genWoId() {
   return SB.fetch('/rpc/generate_work_order_id', { method: 'POST', body: '{}' });
+}
+
+// ── INTERACTIVE SHOP FLOOR ────────────────────────────────────────────────────
+function renderShopFloorInteractive(sector) {
+  const machines = allMachines.filter(m => !sector || (m.sector || m.name?.[0]) === sector);
+  const h = machines.length
+    ? `<div class="machine-grid">${machines.map(m => {
+        const currentWO = allWOs.find(w => w.machine_id === m.id && w.status === 'in_progress' && !w.archived) || null;
+        const pausedWO  = allWOs.find(w => w.machine_id === m.id && w.status === 'paused'      && !w.archived) || null;
+        const nextWOs   = allWOs.filter(w => w.machine_id === m.id && w.status === 'planned'   && !w.archived).slice(0, 3);
+        return buildMachineCard(m, currentWO, pausedWO, nextWOs);
+      }).join('')}</div>`
+    : '<p style="color:var(--muted);padding:1rem">No machines found.</p>';
+  document.getElementById('floor-content').innerHTML = h;
+}
+
+function buildMachineCard(machine, currentWO, pausedWO, nextWOs) {
+  const mid    = machine.id.replace(/-/g, '_');
+  const sec    = machine.sector || machine.name?.[0] || '';
+  const status = currentWO ? 'running' : pausedWO ? 'paused' : 'idle';
+  const badge  = currentWO ? '🟢 RUNNING' : pausedWO ? '🟡 PAUSED' : '⚫ IDLE';
+
+  // ── header ────────────────────────────────────────────────────────────────
+  const header = `<div class="mc-header">
+    <div>
+      <div class="mc-name">${esc(machine.name)}</div>
+      <div class="mc-tonnage">${machine.tonnage}T${sec ? ' · Sector ' + sec : ''}</div>
+    </div>
+    <div class="mc-badge ${status}">${badge}</div>
+  </div>`;
+
+  // ── running WO body ───────────────────────────────────────────────────────
+  let body = '', actions = '';
+  if (currentWO) {
+    const p           = productById(currentWO.product_id);
+    const ov          = p ? getOv(p.id) : {};
+    const productName = ov.name_ar_override || p?.name_ar || p?.name || currentWO.id;
+    const colours     = parseColours(currentWO.colours_json);
+    const colLabel    = colours.slice(0, 2).map(c => c.colour || c.name).filter(Boolean).join(', ');
+    const produced    = currentWO.produced_qty || 0;
+    const total       = currentWO.total_qty    || 0;
+    const pp          = pct(produced, total);
+    const elapsed     = Date.now() - new Date(currentWO.started_at).getTime();
+    const plannedH    = parseFloat(currentWO.planned_runtime_hours) || 0;
+
+    // pieces progress bar
+    const piecesBar = total ? `
+      <div style="display:flex;justify-content:space-between;font-size:.68rem;color:var(--muted);margin-bottom:.18rem">
+        <span>Pieces</span><span>${produced.toLocaleString()} / ${total.toLocaleString()} (${pp}%)</span>
+      </div>
+      <div class="prog-bar" style="margin-bottom:.45rem"><div class="prog-fill${pp>=100?' done':''}" style="width:${pp}%"></div></div>` : '';
+
+    // time timer + bar
+    let timerHtml = '';
+    if (plannedH) {
+      const plannedMs = plannedH * 3_600_000;
+      const timeOver  = elapsed > plannedMs;
+      const timePct   = Math.min(100, Math.round((elapsed / plannedMs) * 100));
+      const cls       = timeOver ? 't-over' : timePct > 90 ? 't-warn' : 't-ok';
+      const diffMs    = Math.abs(elapsed - plannedMs);
+      const lbl       = timeOver ? 'over by' : 'left';
+      timerHtml = `
+        <div class="mc-timer" id="sf-timer-${mid}">
+          <span class="${cls}">${fmtH(elapsed)}</span> elapsed · ${fmtH(plannedMs)} planned · <span class="${cls}">${fmtH(diffMs)} ${lbl}</span>
+        </div>
+        <div class="prog-bar">
+          <div id="sf-prog-${mid}" class="prog-fill" style="width:${timePct}%;background:${timeOver?'#dc2626':timePct>90?'#f59e0b':'var(--accent2)'}"></div>
+        </div>`;
+    } else {
+      timerHtml = `<div class="mc-timer" id="sf-timer-${mid}"><span class="t-ok">${fmtH(elapsed)}</span> elapsed</div>`;
+    }
+
+    body = `<div class="mc-body">
+      <div class="mc-section-lbl">Current Order</div>
+      <div style="font-size:.7rem;color:var(--muted);margin-bottom:.15rem">${esc(currentWO.id)}</div>
+      <div class="mc-product">${esc(productName)}</div>
+      <div class="mc-sub">${currentWO.mould_name ? esc(currentWO.mould_name) + ' · ' : ''}${total ? total.toLocaleString() + ' pcs' : ''}${colLabel ? ' · ' + esc(colLabel) : ''}</div>
+      ${piecesBar}${timerHtml}
+    </div>`;
+
+    if (canAct()) {
+      actions = `<div class="mc-actions">
+        <button class="btn" style="font-size:.75rem;padding:.28rem .7rem" onclick="sfAction('${esc(currentWO.id)}','pause')">⏸ Pause</button>
+        <button class="btn btn-primary" style="font-size:.75rem;padding:.28rem .7rem" onclick="sfAction('${esc(currentWO.id)}','complete')">✓ Complete</button>
+        <button class="btn" style="font-size:.75rem;padding:.28rem .7rem" onclick="openWOPanel('${esc(currentWO.id)}')">Details →</button>
+      </div>`;
+    }
+
+  // ── paused WO body ────────────────────────────────────────────────────────
+  } else if (pausedWO) {
+    const p           = productById(pausedWO.product_id);
+    const ov          = p ? getOv(p.id) : {};
+    const productName = ov.name_ar_override || p?.name_ar || p?.name || pausedWO.id;
+    const colours     = parseColours(pausedWO.colours_json);
+    const colLabel    = colours.slice(0, 2).map(c => c.colour || c.name).filter(Boolean).join(', ');
+    const total       = pausedWO.total_qty || 0;
+
+    body = `<div class="mc-body">
+      <div class="mc-section-lbl">Paused Order</div>
+      <div style="font-size:.7rem;color:var(--muted);margin-bottom:.15rem">${esc(pausedWO.id)}</div>
+      <div class="mc-product">${esc(productName)}</div>
+      <div class="mc-sub">${pausedWO.mould_name ? esc(pausedWO.mould_name) + ' · ' : ''}${total ? total.toLocaleString() + ' pcs' : ''}${colLabel ? ' · ' + esc(colLabel) : ''}</div>
+      <div style="font-size:.72rem;color:var(--amber);margin-top:.35rem">⏸ Order is paused — see Details for reason</div>
+    </div>`;
+
+    if (canAct()) {
+      const delBtn = (isAdmin() || isSupervisor())
+        ? `<button class="btn" style="font-size:.75rem;padding:.28rem .7rem;color:var(--red);border-color:var(--red)" onclick="sfAction('${esc(pausedWO.id)}','delete')">🗑 Delete</button>`
+        : '';
+      actions = `<div class="mc-actions">
+        <button class="btn btn-primary" style="font-size:.75rem;padding:.28rem .7rem" onclick="sfAction('${esc(pausedWO.id)}','resume')">▶ Resume</button>
+        <button class="btn" style="font-size:.75rem;padding:.28rem .7rem" onclick="openWOPanel('${esc(pausedWO.id)}')">Details →</button>
+        ${delBtn}
+      </div>`;
+    }
+
+  // ── idle body ─────────────────────────────────────────────────────────────
+  } else {
+    body = `<div class="mc-idle-body"><span style="font-size:.78rem;color:var(--muted);font-style:italic">No active order</span></div>`;
+  }
+
+  // ── next queue ────────────────────────────────────────────────────────────
+  let queue = '';
+  if (nextWOs.length) {
+    const rows = nextWOs.slice(0, 3).map(wo => {
+      const p    = productById(wo.product_id);
+      const ov   = p ? getOv(p.id) : {};
+      const name = ov.name_ar_override || p?.name_ar || p?.name || wo.id;
+      return `<div class="mc-queue-row">
+        <span class="mc-queue-id">${esc(wo.id)}</span>
+        <span class="mc-queue-name">${esc(name)}</span>
+      </div>`;
+    }).join('');
+    const extra = nextWOs.length > 3
+      ? `<div style="font-size:.65rem;color:var(--muted);margin-top:.2rem">+${nextWOs.length - 3} more queued</div>`
+      : '';
+    queue = `<div class="mc-queue">
+      <div class="mc-queue-hdr">▼ Next in Queue (${nextWOs.length})</div>
+      ${rows}${extra}
+    </div>`;
+  }
+
+  return `<div class="machine-card ${status}">${header}${body}${actions}${queue}</div>`;
 }
 
 // ── FLOOR VIEW ────────────────────────────────────────────────────────────────
