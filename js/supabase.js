@@ -171,9 +171,10 @@ async function dbUpdateMachine(id, patch) {
 // ── WORK ORDERS ───────────────────────────────────────────────────────────────
 
 async function dbGetWorkOrders(filters = {}) {
-  let q = '/work_orders?select=*&order=created_at.desc&limit=500';
+  let q = '/work_orders?select=*&order=created_at.desc&limit=50';
   if (filters.status) q += `&status=eq.${filters.status}`;
   if (filters.machine_id) q += `&machine_id=eq.${encodeURIComponent(filters.machine_id)}`;
+  if (filters.offset) q += `&offset=${filters.offset}`;
   return SB.fetch(q);
 }
 
@@ -194,7 +195,10 @@ async function dbUpdateWorkOrder(id, patch) {
 }
 
 async function dbDeleteWorkOrder(id) {
-  return SB.fetch(`/work_orders?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+  return SB.fetch('/rpc/delete_work_order', {
+    method: 'POST',
+    body: JSON.stringify({ p_order_id: id }),
+  });
 }
 
 // ── SHIFT LOGS ────────────────────────────────────────────────────────────────

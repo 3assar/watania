@@ -255,6 +255,9 @@
     <div id="view-orders">
       <div class="grid-hdr"><div class="grid-title" id="grid-title">All Active Work Orders</div><div class="res-info" id="res-info"></div></div>
       <div class="wo-grid" id="wo-grid"></div>
+      <div id="load-older-wrap" style="text-align:center;padding:1rem 1rem 2rem;display:none">
+        <button id="load-older-btn" onclick="loadOlderWOs()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.5rem 1.5rem;border-radius:6px;cursor:pointer;font-size:.85rem">Load older orders</button>
+      </div>
     </div>
     <div id="view-floor" style="display:none">
       <div class="floor-wrap">
@@ -415,6 +418,8 @@ const DYE_RATIO  = 0.5;
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let allWOs        = [];
+let woOffset      = 0;
+let woExhausted   = false;
 let allMachines   = [];
 let allProducts   = [];
 let overridesMap  = {};
@@ -519,13 +524,15 @@ async function init() {
   setSyncStatus('loading', 'Loading…');
   try {
     const [wos, machines, products, overrides, moulds] = await Promise.all([
-      dbGetWorkOrders(),
+      dbGetWorkOrders({ offset: 0 }),
       SB.fetch('/machines?select=*&order=sector,name'),
       dbGetProducts(),
       dbGetOverridesLight(),
       SB.fetch('/moulds?select=dp_idx,name_ar,mould_code&order=dp_idx'),
     ]);
     allWOs      = wos;
+    woOffset    = 0;
+    woExhausted = wos.length < 50;
     allMachines = machines;
     allProducts = products.map(p => ({ ...p, en: p.name }));
     overridesMap = {};
@@ -668,6 +675,31 @@ function renderWOGrid() {
       </div>
     </div>`;
   }).join('');
+
+  const wrap = document.getElementById('load-older-wrap');
+  const btn  = document.getElementById('load-older-btn');
+  if (wrap) wrap.style.display = woExhausted ? 'none' : '';
+  if (btn)  btn.disabled = false;
+}
+
+async function loadOlderWOs() {
+  const btn = document.getElementById('load-older-btn');
+  if (btn) btn.disabled = true;
+  try {
+    woOffset += 50;
+    const more = await dbGetWorkOrders({ offset: woOffset });
+    if (!more || more.length === 0) {
+      woExhausted = true;
+    } else {
+      const existing = new Set(allWOs.map(w => w.id));
+      for (const wo of more) if (!existing.has(wo.id)) allWOs.push(wo);
+      if (more.length < 50) woExhausted = true;
+    }
+  } catch(e) {
+    woOffset -= 50;
+    showToast(e.message, 'error');
+  }
+  renderWOGrid(); updateCounts();
 }
 
 // ── LIVE TIMER ────────────────────────────────────────────────────────────────
@@ -1170,7 +1202,6 @@ async function deleteWO() {
   setSyncStatus('saving', 'Deleting…');
   try {
     dbLogActivity(SESSION?.id, 'deleted work order', 'work_order', currentWoId, { product_id: wo?.product_id, status: wo?.status }, 'production');
-    await SB.fetch(`/shift_logs?order_id=eq.${encodeURIComponent(currentWoId)}`, { method: 'DELETE' });
     await dbDeleteWorkOrder(currentWoId);
     allWOs = allWOs.filter(w => w.id !== currentWoId);
     closeWOPanel();
@@ -1215,20 +1246,16 @@ async function saveLogEntry() {
     setSyncStatus('saving', 'Saving…');
     await dbUpsertShiftLog(currentWoId, logDate, entry);
 
-    // Recalculate produced_qty and auto-update status
-    const logs = await dbGetShiftLogs(currentWoId);
-    const produced = logs.reduce((a, l) => a + (l.day_production||0) + (l.night_production||0), 0);
-    const wo = allWOs.find(w => w.id === currentWoId);
-    const total = wo?.total_qty || 0;
-    const newStatus = produced >= total && total > 0 ? 'completed'
-                    : produced > 0 ? 'in_progress'
-                    : 'planned';
-    await dbUpdateWorkOrder(currentWoId, { produced_qty: produced, status: newStatus });
-    if (wo) { wo.produced_qty = produced; wo.status = newStatus; }
+    // Trigger fn_update_produced_qty fires server-side — re-fetch the WO for updated state
+    const [updatedWO] = await SB.fetch(`/work_orders?id=eq.${encodeURIComponent(currentWoId)}&select=*`);
+    if (updatedWO) {
+      const idx = allWOs.findIndex(w => w.id === currentWoId);
+      if (idx >= 0) allWOs[idx] = updatedWO;
+    }
 
     dbLogActivity(SESSION?.id, 'logged production', 'work_order', currentWoId, { date: logDate, day: dayProd, night: nightProd }, 'production');
     setSyncStatus('ok', 'Saved ✓');
-    showToast('Log entry saved' + (newStatus === 'completed' ? ' — Order completed! 🎉' : ''));
+    showToast('Log entry saved' + (updatedWO?.status === 'completed' ? ' — Order completed! 🎉' : ''));
     closeLogModal();
     await openWOPanel(currentWoId);
     renderWOGrid(); updateCounts();
