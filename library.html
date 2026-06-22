@@ -1258,7 +1258,7 @@ async function saveNewProduct() {
 // ── ACTIVITY LOG ──────────────────────────────────────────────────────────────
 
 function logActivity(action, target) {
-  dbLogActivity(SESSION?.id, action, null, String(target), null);
+  dbLogActivity(SESSION?.id, action, null, String(target), null, 'library');
 }
 
 async function openLog() {
@@ -1266,7 +1266,7 @@ async function openLog() {
   el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.82rem">Loading…</div>';
   document.getElementById('log-modal').classList.add('open');
   try {
-    const logs = await dbGetActivityLog();
+    const logs = await dbGetActivityLog('library');
     if (!logs.length) {
       el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.82rem">No activity yet.</div>';
       return;

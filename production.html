@@ -246,6 +246,9 @@
     <button class="sb-item" onclick="setSector('A',this)"><span class="sb-icon sec-chip sec-a">A</span>Sector A</button>
     <button class="sb-item" onclick="setSector('B',this)"><span class="sb-icon sec-chip sec-b">B</span>Sector B</button>
     <button class="sb-item" onclick="setSector('C',this)"><span class="sb-icon sec-chip sec-c">C</span>Sector C</button>
+    <div class="sb-div"></div>
+    <div class="sb-sec-title">History</div>
+    <button class="sb-item" onclick="openProdLog()"><span class="sb-icon">📋</span>Activity Log</button>
   </aside>
 
   <main class="main" id="main-content">
@@ -391,6 +394,15 @@
       <button class="btn btn-primary" onclick="confirmComplete()">Complete order</button>
       <button class="btn btn-ghost"   onclick="document.getElementById('early-overlay').classList.remove('open')">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- PRODUCTION ACTIVITY LOG MODAL -->
+<div class="modal-overlay" id="prod-log-overlay" onclick="if(event.target===this)closeProdLog()">
+  <div class="modal" style="width:min(640px,92vw)">
+    <h3>📋 Production Activity Log</h3>
+    <div id="prod-log-list" style="max-height:460px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeProdLog()">Close</button></div>
   </div>
 </div>
 
@@ -779,8 +791,8 @@ async function openWOPanel(id) {
   document.getElementById('wp-del-btn').style.display     = (isAdmin() || isSupervisor())                     ? '' : 'none';
 
   let logs = [], pauseLogs = [];
-  try { logs = await dbGetShiftLogs(id); } catch(e) {}
-  try { pauseLogs = await dbGetPauseLogs(id); } catch(e) {}
+  try { logs = await dbGetShiftLogs(id); } catch(e) { showToast('Could not load production logs — data may be incomplete', 'error'); }
+  try { pauseLogs = await dbGetPauseLogs(id); } catch(e) { showToast('Could not load pause history', 'error'); }
 
   document.getElementById('wp-body').innerHTML = buildWODetailHtml(wo, logs, pauseLogs);
   document.getElementById('wo-panel').classList.add('open');
@@ -980,6 +992,7 @@ async function startWO() {
     const now = new Date().toISOString();
     await dbUpdateWorkOrder(currentWoId, { status: 'in_progress', started_at: now });
     wo.status = 'in_progress'; wo.started_at = now;
+    dbLogActivity(SESSION?.id, 'started work order', 'work_order', currentWoId, { machine: wo.machine_id }, 'production');
     setSyncStatus('ok', 'Saved ✓');
     showToast('Work order started');
     await openWOPanel(currentWoId);
@@ -1068,6 +1081,7 @@ async function confirmComplete() {
     const wo = allWOs.find(w => w.id === currentWoId);
     if (wo) Object.assign(wo, patch);
     _pendingCompleteData = null;
+    dbLogActivity(SESSION?.id, 'completed work order', 'work_order', currentWoId, { produced_qty: wo?.produced_qty, overtime_reason: patch.overtime_reason || null }, 'production');
     setSyncStatus('ok', 'Saved ✓');
     showToast('Work order completed');
     await openWOPanel(currentWoId);
@@ -1097,10 +1111,10 @@ async function confirmPause() {
   closePauseModal();
   setSyncStatus('saving', 'Saving…');
   try {
-    await dbUpdateWorkOrder(currentWoId, { status: 'paused' });
-    await dbCreatePauseLog({ order_id: currentWoId, paused_at: new Date().toISOString(), reason, reason_other: reasonOther || null, paused_by: SESSION?.username || null });
+    await dbPauseWorkOrder(currentWoId, reason, reasonOther || null, SESSION?.username || null);
     const wo = allWOs.find(w => w.id === currentWoId);
     if (wo) wo.status = 'paused';
+    dbLogActivity(SESSION?.id, 'paused work order', 'work_order', currentWoId, { reason, reason_other: reasonOther || null }, 'production');
     setSyncStatus('ok', 'Saved ✓');
     showToast('Order paused — ' + reason);
     await openWOPanel(currentWoId);
@@ -1116,12 +1130,9 @@ async function resumeWO() {
   if (conflict) { showToast(`Machine is running ${conflict.id} — cannot resume until that order is done or paused`, 'error'); return; }
   setSyncStatus('saving', 'Saving…');
   try {
-    // Close the open pause log (most recent with no resumed_at)
-    const pauseLogs = await dbGetPauseLogs(currentWoId);
-    const openLog   = [...(pauseLogs||[])].reverse().find(l => !l.resumed_at);
-    if (openLog) await dbResumePauseLog(openLog.id);
-    await dbUpdateWorkOrder(currentWoId, { status: 'in_progress' });
+    await dbResumeWorkOrder(currentWoId);
     if (wo) wo.status = 'in_progress';
+    dbLogActivity(SESSION?.id, 'resumed work order', 'work_order', currentWoId, null, 'production');
     setSyncStatus('ok', 'Saved ✓');
     showToast('Order resumed');
     await openWOPanel(currentWoId);
@@ -1144,6 +1155,7 @@ async function archiveWO() {
   try {
     await dbUpdateWorkOrder(currentWoId, { archived: true });
     if (wo) wo.archived = true;
+    dbLogActivity(SESSION?.id, 'archived work order', 'work_order', currentWoId, null, 'production');
     setSyncStatus('ok', 'Saved ✓');
     showToast('Order archived');
     closeWOPanel();
@@ -1157,6 +1169,7 @@ async function deleteWO() {
   if (!confirm(`Delete work order "${wo?.id}"?\n\nThis will also delete all shift log entries for this order. This cannot be undone.`)) return;
   setSyncStatus('saving', 'Deleting…');
   try {
+    dbLogActivity(SESSION?.id, 'deleted work order', 'work_order', currentWoId, { product_id: wo?.product_id, status: wo?.status }, 'production');
     await SB.fetch(`/shift_logs?order_id=eq.${encodeURIComponent(currentWoId)}`, { method: 'DELETE' });
     await dbDeleteWorkOrder(currentWoId);
     allWOs = allWOs.filter(w => w.id !== currentWoId);
@@ -1213,6 +1226,7 @@ async function saveLogEntry() {
     await dbUpdateWorkOrder(currentWoId, { produced_qty: produced, status: newStatus });
     if (wo) { wo.produced_qty = produced; wo.status = newStatus; }
 
+    dbLogActivity(SESSION?.id, 'logged production', 'work_order', currentWoId, { date: logDate, day: dayProd, night: nightProd }, 'production');
     setSyncStatus('ok', 'Saved ✓');
     showToast('Log entry saved' + (newStatus === 'completed' ? ' — Order completed! 🎉' : ''));
     closeLogModal();
@@ -1770,6 +1784,7 @@ async function submitWizard() {
       await dbUpdateWorkOrder(editingWoId, data);
       const idx = allWOs.findIndex(w => w.id === editingWoId);
       if (idx >= 0) Object.assign(allWOs[idx], data);
+      dbLogActivity(SESSION?.id, 'edited work order', 'work_order', editingWoId, null, 'production');
       showToast('Work order updated');
       closeWizard();
       if (currentWoId === editingWoId) await openWOPanel(editingWoId);
@@ -1781,6 +1796,7 @@ async function submitWizard() {
       data.produced_qty = 0;
       const [created] = await dbCreateWorkOrder(data);
       allWOs.unshift({ ...data, ...(created || {}), id });
+      dbLogActivity(SESSION?.id, 'created work order', 'work_order', id, { product: data.product_id, machine: data.machine_id }, 'production');
       showToast('Work order created: ' + id);
       closeWizard();
     }
@@ -1965,7 +1981,7 @@ async function openPrint() {
   const p  = productById(wo.product_id);
   const m  = machineById(wo.machine_id);
   let logs = [];
-  try { logs = await dbGetShiftLogs(currentWoId); } catch(e) {}
+  try { logs = await dbGetShiftLogs(currentWoId); } catch(e) { showToast('Could not load logs for print', 'error'); }
 
   const colours   = parseColours(wo.colours_json);
   const totalQty  = calcTotalQty(colours);
@@ -2078,8 +2094,46 @@ async function openPrint() {
   win.focus();
 }
 
+// ── PRODUCTION ACTIVITY LOG ───────────────────────────────────────────────────
+async function openProdLog() {
+  const el = document.getElementById('prod-log-list');
+  el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.82rem">Loading…</div>';
+  document.getElementById('prod-log-overlay').classList.add('open');
+  try {
+    const logs = await dbGetActivityLog('production');
+    if (!logs || !logs.length) {
+      el.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:.82rem">No production activity recorded yet.</div>';
+      return;
+    }
+    const actionIcon = { 'started work order':'▶', 'completed work order':'✓', 'paused work order':'⏸', 'resumed work order':'▶', 'logged production':'📊', 'archived work order':'📦', 'deleted work order':'🗑', 'created work order':'✚' };
+    el.innerHTML = logs.map(l => {
+      const who  = l.users?.username || '—';
+      const when = new Date(l.created_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' });
+      const icon = actionIcon[l.action] || '•';
+      const det  = l.details ? Object.entries(l.details).filter(([,v]) => v != null).map(([k,v]) => `${k}: ${v}`).join(' · ') : '';
+      return `<div style="padding:.55rem .9rem;border-bottom:1px solid var(--border);font-size:.78rem;display:flex;gap:.6rem;align-items:flex-start">
+        <span style="font-size:.9rem;margin-top:.05rem">${icon}</span>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;gap:.5rem">
+            <span style="font-weight:600">${esc(l.action)}</span>
+            <span style="color:var(--muted);white-space:nowrap">${esc(when)}</span>
+          </div>
+          <div style="color:var(--muted);font-size:.72rem;margin-top:.1rem">
+            ${l.entity_id ? `<span style="font-family:monospace;color:var(--fg)">${esc(l.entity_id)}</span>` : ''}
+            ${det ? ' · ' + esc(det) : ''}
+          </div>
+          <div style="color:var(--blue);font-size:.7rem;margin-top:.1rem">by ${esc(who)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="padding:1rem;text-align:center;color:#dc2626;font-size:.82rem">Failed to load: ${esc(e.message)}</div>`;
+  }
+}
+function closeProdLog() { document.getElementById('prod-log-overlay').classList.remove('open'); }
+
 // ── MISC ──────────────────────────────────────────────────────────────────────
-function closeAll() { closeWOPanel(); closeWizard(); closeLogModal(); }
+function closeAll() { closeWOPanel(); closeWizard(); closeLogModal(); closeProdLog(); }
 
 initAuth(showApp, () => {});
 </script>

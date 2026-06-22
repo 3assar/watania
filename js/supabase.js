@@ -115,7 +115,7 @@ async function dbDeleteUser(id) {
 
 // ── ACTIVITY LOG ──────────────────────────────────────────────────────────────
 
-async function dbLogActivity(userId, action, entityType, entityId, details) {
+async function dbLogActivity(userId, action, entityType, entityId, details, module) {
   try {
     await SB.fetch('/activity_log', {
       method: 'POST',
@@ -126,6 +126,7 @@ async function dbLogActivity(userId, action, entityType, entityId, details) {
         entity_type: entityType || null,
         entity_id: entityId ? String(entityId) : null,
         details: details || null,
+        module: module || null,
       }),
     });
   } catch (e) {
@@ -133,8 +134,24 @@ async function dbLogActivity(userId, action, entityType, entityId, details) {
   }
 }
 
-async function dbGetActivityLog() {
-  return SB.fetch('/activity_log?select=*,users(username)&order=created_at.desc&limit=200');
+async function dbGetActivityLog(module) {
+  let q = '/activity_log?select=*,users(username)&order=created_at.desc&limit=200';
+  if (module) q += `&module=eq.${encodeURIComponent(module)}`;
+  return SB.fetch(q);
+}
+
+async function dbPauseWorkOrder(orderId, reason, reasonOther, pausedBy) {
+  return SB.fetch('/rpc/pause_work_order', {
+    method: 'POST',
+    body: JSON.stringify({ p_order_id: orderId, p_reason: reason, p_reason_other: reasonOther || null, p_paused_by: pausedBy || null }),
+  });
+}
+
+async function dbResumeWorkOrder(orderId) {
+  return SB.fetch('/rpc/resume_work_order', {
+    method: 'POST',
+    body: JSON.stringify({ p_order_id: orderId }),
+  });
 }
 
 // ── MACHINES ──────────────────────────────────────────────────────────────────
@@ -154,7 +171,7 @@ async function dbUpdateMachine(id, patch) {
 // ── WORK ORDERS ───────────────────────────────────────────────────────────────
 
 async function dbGetWorkOrders(filters = {}) {
-  let q = '/work_orders?select=*&order=created_at.desc';
+  let q = '/work_orders?select=*&order=created_at.desc&limit=500';
   if (filters.status) q += `&status=eq.${filters.status}`;
   if (filters.machine_id) q += `&machine_id=eq.${encodeURIComponent(filters.machine_id)}`;
   return SB.fetch(q);
