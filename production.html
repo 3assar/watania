@@ -216,7 +216,6 @@
     <div class="logo">Al Watania <span>Plast</span></div>
     <div class="view-tabs">
       <button class="view-tab active" id="tab-orders" onclick="switchView('orders',this)">Work Orders</button>
-      <button class="view-tab" id="tab-floor"  onclick="switchView('floor',this)">Floor View</button>
       <button class="view-tab" id="tab-sf"     onclick="switchView('floor-interactive',this)">Shop Floor</button>
     </div>
     <div class="search-wrap" id="search-wrap">
@@ -496,7 +495,6 @@ function showApp() {
   if (isOperator()) {
     // Operators only get the Shop Floor tab — hide everything else
     document.getElementById('tab-orders').style.display = 'none';
-    document.getElementById('tab-floor').style.display  = 'none';
     document.getElementById('new-wo-btn').style.display = 'none';
     document.getElementById('search-wrap').style.display = 'none';
     const libLink = document.querySelector('a[href="library.html"]');
@@ -542,23 +540,21 @@ function setFloorSector(s, el) {
   floorSector = s;
   document.querySelectorAll('.floor-sec-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  if (currentView === 'floor-interactive') renderShopFloorInteractive(floorSector);
-  else renderFloorView();
+  renderShopFloorInteractive(floorSector);
 }
 
 function switchView(view, el) {
   currentView = view;
   document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  const isFloor = view === 'floor' || view === 'floor-interactive';
+  const isFloor = view === 'floor-interactive';
   document.getElementById('view-orders').style.display = view === 'orders' ? '' : 'none';
   document.getElementById('view-floor').style.display  = isFloor           ? '' : 'none';
   document.getElementById('search-wrap').style.display = view === 'orders' ? '' : 'none';
   if (isFloor) document.getElementById('app').classList.add('sb-collapsed');
   else         document.getElementById('app').classList.remove('sb-collapsed');
-  if (view === 'floor')             { stopFloorTimer(); renderFloorView(); }
-  if (view === 'floor-interactive') { renderShopFloorInteractive(floorSector); startFloorTimer(); }
-  if (!isFloor) stopFloorTimer();
+  if (isFloor) { renderShopFloorInteractive(floorSector); startFloorTimer(); }
+  else         stopFloorTimer();
 }
 function toggleSidebar() { document.getElementById('app').classList.toggle('sb-collapsed'); }
 
@@ -1960,61 +1956,6 @@ function buildMachineCard(machine, currentWO, pausedWO, nextWOs) {
   }
 
   return `<div class="machine-card ${status}">${header}${body}${actions}${queue}</div>`;
-}
-
-// ── FLOOR VIEW ────────────────────────────────────────────────────────────────
-function renderFloorView() {
-  const sectors = { A: [], B: [], C: [] };
-  allMachines.forEach(m => {
-    const s = m.sector || m.name?.[0];
-    if (sectors[s]) sectors[s].push(m);
-  });
-
-  let h = '';
-  ['A', 'B', 'C'].forEach(sec => {
-    if (floorSector && floorSector !== sec) return;
-    const machines = sectors[sec];
-    if (!machines?.length) return;
-    h += `<div class="floor-sector">
-      <div class="floor-sector-hdr"><span class="sec-chip sec-${sec.toLowerCase()}">${sec}</span> Sector ${sec} <span style="font-size:.7rem;color:var(--muted);font-weight:400">(${machines.length} machines)</span></div>
-      <div class="floor-rows">
-        ${machines.map(m => {
-          const activeWOs = activeWOsForMachine(m.id);
-          const curWO     = activeWOs.find(w => w.status === 'in_progress')
-                         || activeWOs.find(w => w.status === 'paused')
-                         || activeWOs.find(w => w.status === 'planned');
-          const queued    = activeWOs.filter(w => w !== curWO && w.status === 'planned');
-          const isIdle    = !curWO;
-          const produced  = curWO?.produced_qty || 0;
-          const total     = curWO?.total_qty    || 0;
-          const pp        = pct(produced, total);
-          const curP      = curWO ? productById(curWO.product_id) : null;
-          const nextP     = queued[0] ? productById(queued[0].product_id) : null;
-          return `<div class="frow ${isIdle?'idle':curWO?.status||''} ${curWO?'clickable':''}" ${curWO?`onclick="openWOPanel('${esc(curWO.id)}')"`:''}>
-            <div>
-              <div class="frow-mach">${esc(m.name)}</div>
-              <div class="frow-ton">${m.tonnage}T</div>
-            </div>
-            <div>
-              ${isIdle ? '<div style="font-size:.72rem;color:var(--muted);font-style:italic">Idle</div>' :
-              `<div class="frow-wo-name">${esc(curP?.en || curWO.id)}${curWO.mould_name?` · <em>${esc(curWO.mould_name)}</em>`:''}</div>
-              <div class="frow-wo-sub">
-                <span class="st st-${curWO.status}" style="font-size:.58rem">${curWO.status.replace('_',' ')}</span>
-                ${total?`<span style="margin-left:.4rem">${produced.toLocaleString()} / ${total.toLocaleString()} pcs (${pp}%)</span>`:''}
-              </div>
-              ${total ? `<div class="prog-bar" style="margin-top:.3rem"><div class="prog-fill${curWO.status==='completed'?' done':''}" style="width:${pp}%"></div></div>` : ''}`}
-            </div>
-            <div class="frow-next">
-              ${queued.length ? `<div><b>Next (${queued.length}):</b> ${esc(nextP?.en||queued[0].id)}</div>` : isIdle ? '' : '<div style="color:var(--muted)">No next order</div>'}
-              ${queued.length > 1 ? `<div style="font-size:.63rem;color:var(--muted)">+${queued.length-1} more queued</div>` : ''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  });
-
-  document.getElementById('floor-content').innerHTML = h || '<p style="color:var(--muted);padding:1rem">No machines found.</p>';
 }
 
 // ── PRINT ─────────────────────────────────────────────────────────────────────
