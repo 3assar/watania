@@ -180,6 +180,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .user-name{font-size:.85rem;font-weight:600;flex:1}
 .user-role{font-size:.7rem;padding:.18rem .5rem;border-radius:10px;font-weight:600}
 .role-admin{background:var(--purplebg);color:var(--purple)}
+.role-supervisor{background:var(--amberbg);color:var(--amber)}
+.role-operator{background:var(--bluebg);color:var(--blue)}
 .role-viewer{background:var(--greenbg);color:var(--green)}
 .toggle-role{font-size:.7rem;padding:.22rem .5rem;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:none;color:var(--text)}
 .toggle-role:hover{background:var(--surface2)}

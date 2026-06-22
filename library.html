@@ -130,7 +130,12 @@
       </div>
       <div class="ef" style="margin-bottom:.6rem">
         <label class="el">Role</label>
-        <select class="es" id="new-role"><option value="viewer">Viewer (read-only)</option><option value="admin">Admin (full access)</option></select>
+        <select class="es" id="new-role">
+          <option value="viewer">Viewer (read-only)</option>
+          <option value="operator">Operator (shop floor)</option>
+          <option value="supervisor">Supervisor (create &amp; manage WOs)</option>
+          <option value="admin">Admin (full access)</option>
+        </select>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="addUser()">Add user</button>
     </div>
@@ -1288,7 +1293,7 @@ async function renderUsersList() {
     const users = await dbGetUsers();
     document.getElementById('users-list').innerHTML = users.map(u => `<div class="user-row">
       <div class="user-name">${esc(u.username)}</div>
-      <span class="user-role ${u.role==='admin'?'role-admin':'role-viewer'}">${u.role}</span>
+      <span class="user-role role-${u.role}">${u.role}</span>
       ${u.username !== SESSION.username
         ? `<button class="toggle-role" onclick="toggleUserRole(${u.id},'${u.role}')">Toggle role</button><button class="del-user-btn" onclick="deleteUser(${u.id},'${esc(u.username)}')">Remove</button>`
         : '<span style="font-size:.7rem;color:var(--muted)">(you)</span>'}
@@ -1299,11 +1304,12 @@ async function renderUsersList() {
 }
 
 async function toggleUserRole(userId, currentRole) {
-  const newRole = currentRole === 'admin' ? 'viewer' : 'admin';
+  const cycle = { viewer: 'operator', operator: 'supervisor', supervisor: 'admin', admin: 'viewer' };
+  const newRole = cycle[currentRole] || 'viewer';
   await dbUpdateUser(userId, { role: newRole });
   logActivity('changed role', 'user ' + userId + ' → ' + newRole);
   renderUsersList();
-  showToast('Role updated');
+  showToast('Role → ' + newRole);
 }
 
 async function deleteUser(userId, username) {

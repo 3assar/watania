@@ -756,6 +756,7 @@ function updateFloorTimers() {
 // ── SHOP FLOOR ACTION WRAPPER ─────────────────────────────────────────────────
 function sfAction(woId, action) {
   currentWoId = woId;
+  if (action === 'start')    startWO();
   if (action === 'pause')    openPauseModal();
   if (action === 'resume')   resumeWO();
   if (action === 'complete') completeWO();
@@ -1806,7 +1807,7 @@ function renderShopFloorInteractive(sector) {
     ? `<div class="machine-grid">${machines.map(m => {
         const currentWO = allWOs.find(w => w.machine_id === m.id && w.status === 'in_progress' && !w.archived) || null;
         const pausedWO  = allWOs.find(w => w.machine_id === m.id && w.status === 'paused'      && !w.archived) || null;
-        const nextWOs   = allWOs.filter(w => w.machine_id === m.id && w.status === 'planned'   && !w.archived).slice(0, 3);
+        const nextWOs   = allWOs.filter(w => w.machine_id === m.id && w.status === 'planned'   && !w.archived);
         return buildMachineCard(m, currentWO, pausedWO, nextWOs);
       }).join('')}</div>`
     : '<p style="color:var(--muted);padding:1rem">No machines found.</p>';
@@ -1915,13 +1916,32 @@ function buildMachineCard(machine, currentWO, pausedWO, nextWOs) {
 
   // ── idle body ─────────────────────────────────────────────────────────────
   } else {
-    body = `<div class="mc-idle-body"><span style="font-size:.78rem;color:var(--muted);font-style:italic">No active order</span></div>`;
+    if (nextWOs.length && canAct()) {
+      const first = nextWOs[0];
+      const p     = productById(first.product_id);
+      const ov    = p ? getOv(p.id) : {};
+      const name  = ov.name_ar_override || p?.name_ar || p?.name || first.id;
+      body = `<div class="mc-body">
+        <div class="mc-section-lbl">Next Up</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-bottom:.15rem">${esc(first.id)}</div>
+        <div class="mc-product">${esc(name)}</div>
+        <div class="mc-sub">${first.total_qty ? first.total_qty.toLocaleString() + ' pcs' : ''}</div>
+      </div>`;
+      actions = `<div class="mc-actions">
+        <button class="btn btn-primary" style="font-size:.75rem;padding:.28rem .7rem" onclick="sfAction('${esc(first.id)}','start')">▶ Start</button>
+        <button class="btn" style="font-size:.75rem;padding:.28rem .7rem" onclick="openWOPanel('${esc(first.id)}')">Details →</button>
+      </div>`;
+    } else {
+      body = `<div class="mc-idle-body"><span style="font-size:.78rem;color:var(--muted);font-style:italic">No active order</span></div>`;
+    }
   }
 
   // ── next queue ────────────────────────────────────────────────────────────
+  // Skip the first WO when machine is idle+actable — it's already shown as the "Next Up" start card
+  const queueWOs  = (currentWO || pausedWO || !canAct()) ? nextWOs : nextWOs.slice(1);
   let queue = '';
-  if (nextWOs.length) {
-    const rows = nextWOs.slice(0, 3).map(wo => {
+  if (queueWOs.length) {
+    const rows = queueWOs.slice(0, 3).map(wo => {
       const p    = productById(wo.product_id);
       const ov   = p ? getOv(p.id) : {};
       const name = ov.name_ar_override || p?.name_ar || p?.name || wo.id;
@@ -1930,11 +1950,11 @@ function buildMachineCard(machine, currentWO, pausedWO, nextWOs) {
         <span class="mc-queue-name">${esc(name)}</span>
       </div>`;
     }).join('');
-    const extra = nextWOs.length > 3
-      ? `<div style="font-size:.65rem;color:var(--muted);margin-top:.2rem">+${nextWOs.length - 3} more queued</div>`
+    const extra = queueWOs.length > 3
+      ? `<div style="font-size:.65rem;color:var(--muted);margin-top:.2rem">+${queueWOs.length - 3} more queued</div>`
       : '';
     queue = `<div class="mc-queue">
-      <div class="mc-queue-hdr">▼ Next in Queue (${nextWOs.length})</div>
+      <div class="mc-queue-hdr">▼ Next in Queue (${queueWOs.length})</div>
       ${rows}${extra}
     </div>`;
   }
