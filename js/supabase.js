@@ -5,20 +5,45 @@ const SUPABASE_URL = 'https://iyyhxhahdtpftpdzgyqd.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_NZ0rp4YCjBPpeCJ4TGoRCg_WZ4jmSen';
 
 const SB = {
-  headers: {
-    apikey: SUPABASE_ANON_KEY,
+  _readHeaders: {
+    apikey:        SUPABASE_ANON_KEY,
     Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
   },
   async fetch(path, opts = {}) {
-    const { headers: extraHeaders, ...restOpts } = opts;
+    const method = (opts.method || 'GET').toUpperCase();
+    const { headers: extraHeaders = {}, body } = opts;
+
+    // Writes go through /api/mutate (token verified server-side, executed via service role)
+    if (method !== 'GET') {
+      const token = getToken();
+      if (!token) throw new Error('Not authenticated');
+      const res = await fetch('/api/mutate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          path,
+          method,
+          body:    body !== undefined ? JSON.parse(body) : undefined,
+          headers: extraHeaders,
+        }),
+      });
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`DB error ${res.status}: ${errBody}`);
+      }
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return res.json();
+      return null;
+    }
+
+    // Reads go direct to Supabase with the anon key
     const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
-      ...restOpts,
-      headers: { ...this.headers, ...(extraHeaders || {}) },
+      headers: { ...this._readHeaders, ...extraHeaders },
     });
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`DB error ${res.status}: ${body}`);
+      const errBody = await res.text();
+      throw new Error(`DB error ${res.status}: ${errBody}`);
     }
     const ct = res.headers.get('content-type') || '';
     if (ct.includes('application/json')) return res.json();

@@ -334,7 +334,7 @@ GRANT EXECUTE ON FUNCTION public.pause_work_order(TEXT,TEXT,TEXT,TEXT) TO anon;
 CREATE OR REPLACE FUNCTION public.resume_work_order(
   p_order_id TEXT
 ) RETURNS void LANGUAGE plpgsql AS $$
-DECLARE v_log_id INTEGER;
+DECLARE v_log_id UUID;
 BEGIN
   SELECT id INTO v_log_id
   FROM pause_logs

@@ -815,7 +815,7 @@ async function openWOPanel(id) {
   const isPaused = wo.status === 'paused';
   const isDone   = wo.status === 'completed';
   document.getElementById('wp-start-btn').style.display   = (actAllowed && active && wo.status === 'planned') ? '' : 'none';
-  document.getElementById('wp-done-btn').style.display    = (actAllowed && active && !isDone)                 ? '' : 'none';
+  document.getElementById('wp-done-btn').style.display    = (actAllowed && active && (running || isPaused))    ? '' : 'none';
   document.getElementById('wp-pause-btn').style.display   = (actAllowed && active && running)                 ? '' : 'none';
   document.getElementById('wp-resume-btn').style.display  = (actAllowed && active && isPaused)                ? '' : 'none';
   document.getElementById('wp-edit-btn').style.display    = (canEdit() && active && !isDone)                  ? '' : 'none';
@@ -1013,10 +1013,10 @@ async function startWO() {
   if (!currentWoId) return;
   const wo = allWOs.find(w => w.id === currentWoId);
   if (!wo) return;
-  // Machine lock — block if this machine already has an in_progress WO
-  const conflict = allWOs.find(w => w.machine_id === wo.machine_id && w.status === 'in_progress' && w.id !== wo.id);
+  // Machine lock — block if this machine already has an in_progress or paused WO
+  const conflict = allWOs.find(w => w.machine_id === wo.machine_id && (w.status === 'in_progress' || w.status === 'paused') && w.id !== wo.id);
   if (conflict) {
-    showToast(`Machine is already running ${conflict.id} — complete or pause that order first`, 'error');
+    showToast(`Machine is already running ${conflict.id} — complete or resume that order first`, 'error');
     return;
   }
   setSyncStatus('saving', 'Saving…');
@@ -1391,7 +1391,7 @@ function renderS1() {
       <div style="font-size:.76rem;color:var(--text);margin-bottom:.65rem">Open the Library card to add mould and BOM details, then click Re-check when you're back.</div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.3rem .7rem"
-                onclick="window.open('library.html#product-${esc(String(wizardData.productId))}&edit','_blank')">Open in Library →</button>
+                onclick="window.open('library.html?pid=${esc(String(wizardData.productId))}&bom=1','_blank')">Open in Library →</button>
         <button class="btn" style="font-size:.75rem;padding:.3rem .7rem"
                 onclick="retryBomCheck()">↻ Re-check</button>
       </div>
@@ -1699,12 +1699,12 @@ function renderS3() {
     grouped[sec].forEach(m => {
       const isSelected = wizardData.machineId === m.id;
       const activeWOs  = activeWOsForMachine(m.id);
-      const curWO      = activeWOs.find(w => w.status === 'in_progress');
+      const activeWO   = activeWOs.find(w => w.status === 'in_progress' || w.status === 'paused');
       const nextWOs    = activeWOs.filter(w => w.status === 'planned');
       let queueNote = '';
-      if (curWO)            queueNote = 'Running: ' + (productById(curWO.product_id)?.en || curWO.id);
+      if (activeWO)            queueNote = 'Running: ' + (productById(activeWO.product_id)?.en || activeWO.id);
       else if (nextWOs.length) queueNote = nextWOs.length + ' queued';
-      else                  queueNote = 'Idle';
+      else                     queueNote = 'Idle';
 
       machHtml += `<div class="mach-item ${isSelected?'selected':''}" onclick="selectMachine('${esc(m.id)}')">
         <span class="mach-name">${esc(m.name)}</span>

@@ -1,44 +1,57 @@
-// AWP Auth — session management using Supabase users table
+// AWP Auth — session backed by a signed JWT issued by /api/login.
+// The token is stored in localStorage. Claims are read from the payload.
+// Role cannot be forged — signature is verified server-side on every write.
 
-async function sha256(msg) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+let SESSION = null; // { id, username, role, exp }
+
+function _b64pad(str) {
+  return str.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (4 - str.length % 4) % 4);
 }
 
-const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 hours
+function parseJWTPayload(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    return JSON.parse(atob(_b64pad(parts[1])));
+  } catch { return null; }
+}
 
-let SESSION = null; // { id, username, role, loginAt }
+function getToken() {
+  try { return localStorage.getItem('awp_token') || null; } catch { return null; }
+}
 
-function sessionExpired(s) {
-  return !s || !s.loginAt || (Date.now() - s.loginAt) > SESSION_TTL;
+function sessionExpired() {
+  const token = getToken();
+  if (!token) return true;
+  const payload = parseJWTPayload(token);
+  return !payload || payload.exp < Math.floor(Date.now() / 1000);
 }
 
 function getSession() {
   if (SESSION) return SESSION;
-  try {
-    const s = localStorage.getItem('awp_session');
-    if (s) SESSION = JSON.parse(s);
-  } catch {}
+  const token = getToken();
+  if (!token) return null;
+  const p = parseJWTPayload(token);
+  if (!p) return null;
+  SESSION = { id: p.sub, username: p.username, role: p.awp_role, exp: p.exp };
   return SESSION;
 }
 
 async function initAuth(onSuccess, onReady) {
-  // Restore existing session — clear it if expired
-  const saved = localStorage.getItem('awp_session');
-  if (saved) {
-    try { SESSION = JSON.parse(saved); } catch {}
-    if (SESSION && sessionExpired(SESSION)) {
-      SESSION = null;
-      localStorage.removeItem('awp_session');
-    }
+  if (!sessionExpired()) {
+    SESSION = getSession();
     if (SESSION) { onSuccess(); return; }
   }
-  // Ensure default admin user exists in Supabase
+  // Clear any stale token
+  localStorage.removeItem('awp_token');
+  SESSION = null;
+
+  // Bootstrap: ensure default admin exists (GET — uses anon key, safe before login)
   try {
     const users = await dbGetUsers();
     if (!users || users.length === 0) {
-      const h = await sha256('6666');
-      await dbCreateUser({ username: 'yousef', password_hash: h, role: 'admin', active: true });
+      // Can't create without a token — just show login. Admin must be seeded via Supabase.
+      console.warn('No users found. Seed at least one admin via Supabase dashboard.');
     }
   } catch (e) {
     console.warn('Auth init warning:', e.message);
@@ -47,21 +60,18 @@ async function initAuth(onSuccess, onReady) {
 }
 
 async function doLogin() {
-  const uEl = document.getElementById('lu');
-  const pEl = document.getElementById('lp');
+  const uEl   = document.getElementById('lu');
+  const pEl   = document.getElementById('lp');
   const errEl = document.getElementById('login-err');
-  const btn = document.querySelector('.login-btn');
+  const btn   = document.querySelector('.login-btn');
 
   const username = uEl.value.trim().toLowerCase();
   const password = pEl.value;
 
-  if (!username || !password) {
-    errEl.textContent = 'Please enter username and password.';
-    return;
-  }
+  if (!username || !password) { errEl.textContent = 'Please enter username and password.'; return; }
 
   btn.textContent = 'Signing in…';
-  btn.disabled = true;
+  btn.disabled    = true;
   errEl.textContent = '';
 
   try {
@@ -78,25 +88,28 @@ async function doLogin() {
       return;
     }
 
-    SESSION = { id: data.id, username: data.username, role: data.role, loginAt: Date.now() };
-    localStorage.setItem('awp_session', JSON.stringify(SESSION));
+    const payload = parseJWTPayload(data.token);
+    if (!payload) { errEl.textContent = 'Login failed: invalid token.'; return; }
+
+    localStorage.setItem('awp_token', data.token);
+    SESSION = { id: payload.sub, username: payload.username, role: payload.awp_role, exp: payload.exp };
     showApp();
   } catch (e) {
     errEl.textContent = 'Login failed: ' + e.message;
   } finally {
     btn.textContent = 'Sign in';
-    btn.disabled = false;
+    btn.disabled    = false;
   }
 }
 
 function doLogout() {
   SESSION = null;
-  localStorage.removeItem('awp_session');
+  localStorage.removeItem('awp_token');
   location.href = 'index.html';
 }
 
-function isAdmin()      { return !!(SESSION && SESSION.role === 'admin'); }
-function isSupervisor() { return !!(SESSION && SESSION.role === 'supervisor'); }
-function isOperator()   { return !!(SESSION && SESSION.role === 'operator'); }
-function canEdit()      { return isAdmin() || isSupervisor(); }   // create/edit WOs + library cards
-function canAct()       { return isAdmin() || isSupervisor() || isOperator(); } // start/pause/resume/complete
+function isAdmin()      { const s = SESSION || getSession(); return !!(s && s.role === 'admin'); }
+function isSupervisor() { const s = SESSION || getSession(); return !!(s && s.role === 'supervisor'); }
+function isOperator()   { const s = SESSION || getSession(); return !!(s && s.role === 'operator'); }
+function canEdit()      { return isAdmin() || isSupervisor(); }
+function canAct()       { return isAdmin() || isSupervisor() || isOperator(); }

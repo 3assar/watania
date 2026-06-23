@@ -1,6 +1,3 @@
-// Server-side login — hashes password server-side, returns a signed JWT.
-// Requires SUPABASE_SERVICE_ROLE_KEY and SESSION_SECRET in Netlify env vars.
-
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -23,12 +20,14 @@ async function signJWT(payload, secret) {
   return `${header}.${body}.${sigB64}`;
 }
 
-export default async (request) => {
+export async function onRequest(context) {
+  const { request, env } = context;
+
   const cors = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin':  '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json',
+    'Content-Type':                 'application/json',
   };
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -36,9 +35,9 @@ export default async (request) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: cors });
   }
 
-  const supabaseUrl    = Netlify.env.get('SUPABASE_URL');
-  const serviceRoleKey = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const sessionSecret  = Netlify.env.get('SESSION_SECRET');
+  const supabaseUrl    = env.SUPABASE_URL;
+  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const sessionSecret  = env.SESSION_SECRET;
 
   if (!supabaseUrl || !serviceRoleKey || !sessionSecret) {
     return new Response(JSON.stringify({ error: 'Server misconfiguration' }), { status: 500, headers: cors });
@@ -83,6 +82,4 @@ export default async (request) => {
   }, sessionSecret);
 
   return new Response(JSON.stringify({ token }), { status: 200, headers: cors });
-};
-
-export const config = { path: '/api/login' };
+}

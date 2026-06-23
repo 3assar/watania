@@ -5,3 +5,7 @@
 [[edge_functions]]
   path = "/api/login"
   function = "login"
+
+[[edge_functions]]
+  path = "/api/mutate"
+  function = "mutate"
