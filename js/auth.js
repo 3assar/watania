@@ -45,7 +45,21 @@ function getSession() {
 async function initAuth(onSuccess, onReady) {
   if (!sessionExpired()) {
     SESSION = getSession();
-    if (SESSION) { onSuccess(); return; }
+    if (SESSION) {
+      // Verify role hasn't been changed by admin since token was issued
+      try {
+        const users = await dbGetUsers();
+        const me = users?.find(u => String(u.id) === String(SESSION.id));
+        if (me && me.role !== SESSION.role) {
+          localStorage.removeItem('awp_token');
+          SESSION = null;
+          onReady();
+          return;
+        }
+      } catch { /* can't verify — let through */ }
+      onSuccess();
+      return;
+    }
   }
   // Clear any stale token
   localStorage.removeItem('awp_token');

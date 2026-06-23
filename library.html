@@ -332,10 +332,16 @@ async function showApp() {
     document.getElementById('add-product-btn').style.display = '';
   }
   await init();
-  // Handle deep link from production.html: ?pid=X&bom=1
+  // Handle deep link from production.html: ?pid=X&bom=1&return=production
   const params = new URLSearchParams(window.location.search);
   const deepPidRaw = params.get('pid');
   if (deepPidRaw) {
+    if (params.get('return') === 'production') {
+      const bar = document.createElement('div');
+      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--accent);color:#fff;font-size:.78rem;padding:.4rem 1rem;display:flex;align-items:center;gap:.75rem';
+      bar.innerHTML = `<span>← Opened from Work Order Wizard</span><button onclick="history.back()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:5px;padding:.2rem .6rem;cursor:pointer;font-size:.76rem">← Back to Production</button>`;
+      document.body.prepend(bar);
+    }
     // Convert to number if the ID is numeric (products table uses integer PKs)
     const deepPid = /^\d+$/.test(deepPidRaw) ? parseInt(deepPidRaw, 10) : deepPidRaw;
     await openPanel(deepPid);
@@ -612,7 +618,7 @@ function renderGrid() {
 
 async function openPanel(id) {
   currentPid = id; editMode = false; unsaved = false;
-  const p = allProducts.find(x => x.id === id);
+  const p = allProducts.find(x => String(x.id) === String(id));
   if (!p) return;
   document.getElementById('panel-title').textContent = p.en;
   const pr = getProfile(id);
@@ -794,7 +800,7 @@ function renderView(id) {
 // ── EDIT MODE ─────────────────────────────────────────────────────────────────
 
 function renderEdit(id) {
-  const p  = allProducts.find(x => x.id === id);
+  const p  = allProducts.find(x => String(x.id) === String(id));
   const [ar, d] = findBC(p);
   const [, md]  = findMould(p);
   const pr  = getProfile(id);
@@ -1307,10 +1313,14 @@ async function renderUsersList() {
 async function toggleUserRole(userId, currentRole) {
   const cycle = { viewer: 'operator', operator: 'supervisor', supervisor: 'admin', admin: 'viewer' };
   const newRole = cycle[currentRole] || 'viewer';
-  await dbUpdateUser(userId, { role: newRole });
-  logActivity('changed role', 'user ' + userId + ' → ' + newRole);
-  renderUsersList();
-  showToast('Role → ' + newRole);
+  try {
+    await dbUpdateUser(userId, { role: newRole });
+    logActivity('changed role', 'user ' + userId + ' → ' + newRole);
+    await renderUsersList();
+    showToast('Role → ' + newRole + ' (user must re-login to apply)');
+  } catch (e) {
+    showToast('Failed to update role: ' + e.message, 'error');
+  }
 }
 
 async function deleteUser(userId, username) {
