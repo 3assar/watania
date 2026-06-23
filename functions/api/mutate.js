@@ -77,7 +77,9 @@ export async function onRequest(context) {
 
   const ct         = supaRes.headers.get('content-type') || '';
   const resBody    = ct.includes('application/json') ? await supaRes.json() : await supaRes.text();
-  const resBodyStr = typeof resBody === 'string' ? resBody : JSON.stringify(resBody);
+  const resBodyStr = typeof resBody === 'string'
+    ? (resBody === '' ? 'null' : resBody)
+    : JSON.stringify(resBody);
 
   return new Response(resBodyStr, {
     status:  supaRes.status,

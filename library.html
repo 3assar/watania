@@ -229,7 +229,7 @@ async function saveProfile(id, data) {
     quality_json:          data.quality         || null,
     assembly_steps:        data.assemblySteps   || null,
     revisions:             data.revisions       || null,
-    bom_json:              data.bom             || null,
+    bom_json:              (data.bom && data.bom.length) ? data.bom : null,
     last_edited_by:        data._lastEditBy     || null,
     last_edited_at:        data._lastEditAt     || null,
     trashed:               data._trashed        || false,
@@ -629,9 +629,9 @@ async function openPanel(id) {
   document.getElementById('perm-del-btn').style.display = (isAdmin() && isTrashed) ? '' : 'none';
   document.getElementById('edit-btn').textContent = '✏ Edit';
   document.getElementById('edit-btn').classList.remove('active');
-  renderView(id);
   document.getElementById('panel').classList.add('open');
   document.getElementById('overlay').classList.add('open');
+  renderView(id);
   // Lazy-load image_data if not yet in memory
   const ov = overridesMap[String(id)];
   if (ov && !('image_data' in ov)) {
@@ -691,7 +691,7 @@ function renderMaterialRatios(mat, savedRatios) {
 }
 
 function renderView(id) {
-  const p  = allProducts.find(x => x.id === id);
+  const p  = allProducts.find(x => String(x.id) === String(id));
   const [ar, d] = findBC(p);
   const [, md]  = findMould(p);
   const pr = getProfile(id);
@@ -1123,8 +1123,14 @@ function clearProdImg() {
 
 // ── SAVE EDIT ─────────────────────────────────────────────────────────────────
 
+function bomRowHasData(row) {
+  return !!(row && (row.mouldName || (row.machines && row.machines.length) ||
+    (row.colours && row.colours.length) || row.cycleTime || row.piecesCycle ||
+    row._dpIdx !== undefined));
+}
+
 async function saveEdit() {
-  const bom   = readBomRows();
+  const bom   = readBomRows().filter(bomRowHasData);
   const steps = [...document.querySelectorAll('[id^="sr-"]')].map(el => el.querySelector('input')?.value||'').filter(Boolean);
   const revs  = [...document.querySelectorAll('[id^="rvr-"]')].map(el => {
     const ins = el.querySelectorAll('input');

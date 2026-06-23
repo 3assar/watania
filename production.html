@@ -1292,7 +1292,7 @@ function openWizardEdit() {
   wizardStep = 1;
   wizardData = {
     productId: wo.product_id, productName: p?.en || '', productNameAr: p?.name_ar || '',
-    bom: getOv(wo.product_id).bom_json || [], mouldIdx: null, lastWo: null, bomRecipes: [],
+    bom: (getOv(wo.product_id).bom_json || []).filter(bomRowHasData), mouldIdx: null, lastWo: null, bomRecipes: [],
     weightG: wo.weight_per_piece_g || '', cycleS: wo.cycle_time_s || '',
     coolingS: wo.cooling_time_s ?? '', ppc: wo.pieces_per_cycle || 1,
     colours: colours.length ? colours : [{ name: '', units: '' }],
@@ -1433,7 +1433,7 @@ async function retryBomCheck() {
     const fresh = rows?.[0];
     if (fresh) {
       overridesMap[pid] = { ...( overridesMap[pid] || {}), ...fresh };
-      wizardData.bom = fresh.bom_json || [];
+      wizardData.bom = (fresh.bom_json || []).filter(bomRowHasData);
       if (wizardData.bom.length === 1) {
         wizardData.mouldIdx = 0;
         const _lbl = mouldLabel(wizardData.bom[0]);
@@ -1446,13 +1446,19 @@ async function retryBomCheck() {
   renderWizard();
 }
 
+function bomRowHasData(row) {
+  return !!(row && (row.mouldName || (row.machines && row.machines.length) ||
+    (row.colours && row.colours.length) || row.cycleTime || row.piecesCycle ||
+    row._dpIdx !== undefined));
+}
+
 function selectProduct(pid) {
   const p  = productById(pid);
   const ov = getOv(pid);
   wizardData.productId    = pid;
   wizardData.productName  = p?.en || String(pid);
   wizardData.productNameAr = p?.name_ar || '';
-  wizardData.bom          = ov.bom_json || [];
+  wizardData.bom          = (ov.bom_json || []).filter(bomRowHasData);
   wizardData.mouldIdx     = wizardData.bom.length === 1 ? 0 : null;
   wizardData.lastWo       = lastWOForProduct(pid);
 
