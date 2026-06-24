@@ -2055,7 +2055,7 @@ async function openPrint() {
       <button onclick="window.print()" style="padding:6px 16px;background:#c94c28;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit">🖨 Print / Save PDF</button>
       <button onclick="window.close()" style="padding:6px 14px;background:#eee;border:1px solid #ccc;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit">✕ Close</button>
     </div>
-    <div class="h1">أمـر تشغيـل</div>
+    <div class="h1">أمـر تشغيـل <span class="wo-id">${e(wo.id)}</span></div>
     <div class="g2">
       <div>
         <div class="row"><span class="lbl">اسم المنتج:</span><span class="val">${e(p?.name||wo.product_id)}${p?.name_ar?' / '+e(p.name_ar):''}</span></div>
@@ -2104,7 +2104,7 @@ async function openPrint() {
         <tr style="font-weight:700"><td>الإجمالي</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
       </tbody>
     </table>
-    <div style="margin-top:5mm;display:grid;grid-template-columns:1fr 1fr;gap:4mm;font-size:8pt">
+    <div style="margin-top:3mm;display:grid;grid-template-columns:1fr 1fr;gap:4mm;font-size:8pt">
       <div>وردية نهار: <span style="border-bottom:1pt solid #aaa;display:inline-block;width:70pt"></span></div>
       <div>وردية ليل: <span style="border-bottom:1pt solid #aaa;display:inline-block;width:70pt"></span></div>
     </div>
@@ -2116,23 +2116,24 @@ async function openPrint() {
 <meta charset="UTF-8">
 <title>أمر تشغيل — ${e(wo.id)}</title>
 <style>
-  @page{margin:10mm}
+  @page{margin:8mm}
   *{box-sizing:border-box}
-  body{font-family:Arial,Helvetica,sans-serif;color:#111;direction:rtl;margin:0;padding:6mm 10mm}
-  .h1{text-align:center;font-size:17pt;font-weight:900;border-bottom:2pt solid #111;padding-bottom:2.5mm;margin-bottom:5mm}
-  .g2{display:grid;grid-template-columns:1fr 1fr;gap:3mm 8mm;margin-bottom:4mm}
-  .row{display:flex;align-items:baseline;gap:2mm;margin-bottom:2mm;font-size:9pt}
+  body{font-family:Arial,Helvetica,sans-serif;color:#111;direction:rtl;margin:0;padding:3mm 9mm}
+  .h1{text-align:center;font-size:16pt;font-weight:900;border-bottom:2pt solid #111;padding-bottom:2mm;margin-bottom:3.5mm}
+  .h1 .wo-id{font-size:11pt;font-weight:700;font-family:Arial,sans-serif;direction:ltr;display:inline-block;margin-right:3mm}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:3mm 8mm;margin-bottom:3mm}
+  .row{display:flex;align-items:baseline;gap:2mm;margin-bottom:1.4mm;font-size:9pt}
   .lbl{font-weight:700;white-space:nowrap;min-width:36mm;font-size:8.5pt}
   .val{border-bottom:1pt solid #bbb;flex:1;min-height:12pt;padding-bottom:.5mm;font-size:8.5pt}
-  .sec{font-size:9pt;font-weight:900;margin:4mm 0 2mm;border-bottom:1pt solid #111;padding-bottom:1mm}
+  .sec{font-size:9pt;font-weight:900;margin:3mm 0 1.5mm;border-bottom:1pt solid #111;padding-bottom:1mm}
   .ctbl{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:4mm}
   .ctbl th{background:#eee;border:1pt solid #888;padding:1.5mm 2mm;text-align:center;font-weight:700}
   .ctbl td{border:1pt solid #888;padding:1.5mm 2mm;text-align:center}
   .ctbl td:first-child{text-align:right}
   .ltbl{width:100%;border-collapse:collapse;font-size:7.5pt}
   .ltbl th{background:#eee;border:1pt solid #888;padding:1.5mm;text-align:center;font-size:7pt;font-weight:700}
-  .ltbl td{border:1pt solid #888;height:8mm}
-  .foot{margin-top:5mm;font-size:7pt;color:#888;border-top:1pt solid #ccc;padding-top:1.5mm;text-align:center}
+  .ltbl td{border:1pt solid #888;height:7mm}
+  .foot{margin-top:3mm;font-size:7pt;color:#888;border-top:1pt solid #ccc;padding-top:1.5mm;text-align:center}
   @media print{.no-print{display:none!important}}
 </style>
 </head>
