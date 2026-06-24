@@ -312,7 +312,7 @@
   <div class="modal" id="log-modal">
     <h3>Log Daily Production</h3>
     <div class="f-g2" style="margin-bottom:.7rem">
-      <div class="f-field"><label class="f-lbl">Date</label><input class="f-in" type="date" id="log-date"></div>
+      <div class="f-field"><label class="f-lbl">Date</label><input class="f-in" type="date" id="log-date" onchange="prefillLogForDate(this.value)"></div>
       <div></div>
     </div>
     <div class="f-g2" style="margin-bottom:.6rem">
@@ -1213,19 +1213,31 @@ async function deleteWO() {
 }
 
 // ── LOG ENTRY ─────────────────────────────────────────────────────────────────
-function openLogModal() {
+let _logModalLogs = [];   // existing shift_logs for the open WO, so edits don't clobber the other shift
+
+async function openLogModal() {
   if (!currentWoId) return;
-  const wo = allWOs.find(w => w.id === currentWoId);
-  document.getElementById('log-date').value         = new Date().toISOString().slice(0,10);
-  document.getElementById('log-day-worker').value   = wo?.day_worker   || '';
-  document.getElementById('log-night-worker').value = wo?.night_worker || '';
-  document.getElementById('log-day-prod').value   = '';
-  document.getElementById('log-day-waste').value  = '';
-  document.getElementById('log-night-prod').value  = '';
-  document.getElementById('log-night-waste').value = '';
-  document.getElementById('log-notes').value = '';
-  document.getElementById('log-summary').textContent = '';
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('log-date').value = today;
+  // Load existing entries so re-logging the same date edits that row instead of overwriting it.
+  try { _logModalLogs = await dbGetShiftLogs(currentWoId) || []; }
+  catch(e) { _logModalLogs = []; showToast('Could not load existing logs — re-logging may overwrite', 'error'); }
+  prefillLogForDate(today);
   document.getElementById('log-overlay').classList.add('open');
+}
+
+// Fill the modal from any existing entry for `date`; blank fields when none exists.
+function prefillLogForDate(date) {
+  const wo  = allWOs.find(w => w.id === currentWoId);
+  const row = _logModalLogs.find(l => l.log_date === date);
+  document.getElementById('log-day-worker').value   = row?.day_worker   ?? (wo?.day_worker   || '');
+  document.getElementById('log-night-worker').value = row?.night_worker ?? (wo?.night_worker || '');
+  document.getElementById('log-day-prod').value    = row ? (row.day_production   ?? '') : '';
+  document.getElementById('log-day-waste').value   = row ? (row.day_waste        ?? '') : '';
+  document.getElementById('log-night-prod').value  = row ? (row.night_production ?? '') : '';
+  document.getElementById('log-night-waste').value = row ? (row.night_waste      ?? '') : '';
+  document.getElementById('log-notes').value       = row ? (row.notes ?? '') : '';
+  document.getElementById('log-summary').textContent = row ? '✎ Editing existing entry for this date' : '';
 }
 function closeLogModal() { document.getElementById('log-overlay').classList.remove('open'); }
 

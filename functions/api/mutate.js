@@ -18,6 +18,69 @@ async function verifyJWT(token, secret) {
   return payload;
 }
 
+// ── Authorization rules ────────────────────────────────────────────────────────
+// The proxy runs with the service-role key, so it MUST authorize every request
+// itself — the DB no longer does (anon writes were revoked in migration 003, and
+// service role bypasses RLS). Two gates:
+//   1. write methods only — reads never go through the proxy, so allowing GET here
+//      would let any logged-in user exfiltrate service-role-only data (e.g.
+//      users.password_hash). Forbidden.
+//   2. (table|rpc, method) must be allowlisted, and the caller's signed awp_role
+//      must meet the minimum for that operation.
+const ROLE_RANK = { viewer: 0, operator: 1, supervisor: 2, admin: 3 };
+
+// Minimum role per table per write method. Anything absent is denied.
+// NOTE: work_orders PATCH is 'operator' because shop-floor start/complete use it
+// (canAct); supervisor-only edit/archive also use PATCH and can't be separated at
+// this layer — residual over-permission, see TECHNICAL_AUDIT_v3 §1.6.
+const TABLE_RULES = {
+  work_orders:       { POST: 'supervisor', PATCH: 'operator',   DELETE: 'supervisor' },
+  shift_logs:        { POST: 'operator',   PATCH: 'operator' },
+  pause_logs:        { POST: 'operator',   PATCH: 'operator' },
+  activity_log:      { POST: 'operator' },
+  machines:          { PATCH: 'supervisor' },
+  products:          { POST: 'supervisor', PATCH: 'supervisor', DELETE: 'supervisor' },
+  product_overrides: { POST: 'supervisor', DELETE: 'supervisor' },
+  users:             { POST: 'admin',      PATCH: 'admin',      DELETE: 'admin' },
+};
+
+const RPC_RULES = {
+  pause_work_order:       'operator',
+  resume_work_order:      'operator',
+  delete_work_order:      'supervisor',
+  generate_work_order_id: 'supervisor',
+};
+
+// Returns null if allowed, or { status, error } if denied.
+function authorize(role, path, method) {
+  if (!['POST', 'PATCH', 'DELETE'].includes(method)) {
+    return { status: 405, error: 'Method not permitted through proxy' };
+  }
+  const rank = ROLE_RANK[role];
+  if (rank === undefined) return { status: 403, error: 'Unknown role' };
+
+  if (typeof path !== 'string' || !path.startsWith('/')) {
+    return { status: 400, error: 'Invalid path' };
+  }
+  const segs = path.split('?')[0].split('/').filter(Boolean);
+  if (segs.length === 0) return { status: 400, error: 'Invalid path' };
+
+  let required;
+  if (segs[0] === 'rpc') {
+    required = RPC_RULES[segs[1]];
+    if (!required) return { status: 403, error: 'RPC not permitted' };
+  } else {
+    const rules = TABLE_RULES[segs[0]];
+    if (!rules) return { status: 403, error: 'Resource not permitted' };
+    required = rules[method];
+    if (!required) return { status: 405, error: 'Method not allowed on resource' };
+  }
+  if (rank < ROLE_RANK[required]) {
+    return { status: 403, error: 'Insufficient role' };
+  }
+  return null;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
 
@@ -46,8 +109,9 @@ export async function onRequest(context) {
   if (!rawToken) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors });
   }
+  let claims;
   try {
-    await verifyJWT(rawToken, sessionSecret);
+    claims = await verifyJWT(rawToken, sessionSecret);
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 401, headers: cors });
   }
@@ -60,6 +124,11 @@ export async function onRequest(context) {
   const { path, method, body, headers: extraHeaders = {} } = envelope;
   if (!path || !method) {
     return new Response(JSON.stringify({ error: 'Missing path or method' }), { status: 400, headers: cors });
+  }
+
+  const denied = authorize(claims.awp_role, path, String(method).toUpperCase());
+  if (denied) {
+    return new Response(JSON.stringify({ error: denied.error }), { status: denied.status, headers: cors });
   }
 
   const fwdHeaders = {

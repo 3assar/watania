@@ -242,7 +242,9 @@ async function dbCreateShiftLog(data) {
 }
 
 async function dbUpsertShiftLog(orderId, logDate, data) {
-  return SB.fetch('/shift_logs', {
+  // on_conflict targets the (order_id, log_date) unique constraint so a second save
+  // for the same day UPDATEs that day's row instead of failing with a 23505 PK-conflict.
+  return SB.fetch('/shift_logs?on_conflict=order_id,log_date', {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
     body: JSON.stringify({ order_id: orderId, log_date: logDate, ...data }),
