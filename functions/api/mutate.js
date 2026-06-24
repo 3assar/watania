@@ -94,7 +94,8 @@ export async function onRequest(context) {
     resBodyStr = 'null';
   }
 
-  return new Response(resBodyStr, {
+  const nullBodyStatus = [101, 103, 204, 205, 304].includes(supaRes.status);
+  return new Response(nullBodyStatus ? null : resBodyStr, {
     status:  supaRes.status,
     headers: { ...cors, 'Content-Type': ct || 'application/json' },
   });
