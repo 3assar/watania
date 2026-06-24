@@ -32,6 +32,7 @@ const SB = {
         const errBody = await res.text();
         throw new Error(`DB error ${res.status}: ${errBody}`);
       }
+      if (res.status === 204 || res.status === 205) return null;
       const ct = res.headers.get('content-type') || '';
       if (ct.includes('application/json')) return res.json();
       return null;
