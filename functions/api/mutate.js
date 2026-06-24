@@ -69,17 +69,30 @@ export async function onRequest(context) {
   };
   if (extraHeaders.Prefer) fwdHeaders.Prefer = extraHeaders.Prefer;
 
-  const supaRes = await fetch(`${supabaseUrl}/rest/v1${path}`, {
-    method,
-    headers: fwdHeaders,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let supaRes;
+  try {
+    supaRes = await fetch(`${supabaseUrl}/rest/v1${path}`, {
+      method,
+      headers: fwdHeaders,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'Upstream fetch failed: ' + e.message }), { status: 502, headers: cors });
+  }
 
-  const ct         = supaRes.headers.get('content-type') || '';
-  const resBody    = ct.includes('application/json') ? await supaRes.json() : await supaRes.text();
-  const resBodyStr = typeof resBody === 'string'
-    ? (resBody === '' ? 'null' : resBody)
-    : JSON.stringify(resBody);
+  const ct = supaRes.headers.get('content-type') || '';
+  let resBodyStr;
+  try {
+    if (ct.includes('application/json')) {
+      const resBody = await supaRes.json();
+      resBodyStr = JSON.stringify(resBody ?? null);
+    } else {
+      const resText = await supaRes.text();
+      resBodyStr = resText === '' ? 'null' : resText;
+    }
+  } catch {
+    resBodyStr = 'null';
+  }
 
   return new Response(resBodyStr, {
     status:  supaRes.status,

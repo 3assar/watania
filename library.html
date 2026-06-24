@@ -1331,10 +1331,14 @@ async function toggleUserRole(userId, currentRole) {
 
 async function deleteUser(userId, username) {
   if (!confirm('Remove user ' + username + '?')) return;
-  await dbDeleteUser(userId);
-  logActivity('removed user', username);
-  renderUsersList();
-  showToast('User removed');
+  try {
+    await dbDeleteUser(userId);
+    logActivity('removed user', username);
+    await renderUsersList();
+    showToast('User removed');
+  } catch (e) {
+    showToast('Failed to remove user: ' + e.message, 'error');
+  }
 }
 
 async function addUser() {
