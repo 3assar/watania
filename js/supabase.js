@@ -1,8 +1,25 @@
 // AWP Supabase client — REST API helpers
 // All DB access goes through these functions.
 
-const SUPABASE_URL = 'https://iyyhxhahdtpftpdzgyqd.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_NZ0rp4YCjBPpeCJ4TGoRCg_WZ4jmSen';
+// Environment switch: the LIVE site uses the production database; every other host
+// (Tester preview, hash previews, local files) uses the Tester database. We allowlist
+// the PRODUCTION hosts, so anything not explicitly live falls back to Tester — a preview
+// can therefore never accidentally read/write live data. When the custom domain goes
+// live, add it to PROD_HOSTS here AND to ALLOWED_ORIGINS in Cloudflare.
+const SUPABASE_ENVS = {
+  production: {
+    url:     'https://iyyhxhahdtpftpdzgyqd.supabase.co',
+    anonKey: 'sb_publishable_NZ0rp4YCjBPpeCJ4TGoRCg_WZ4jmSen',
+  },
+  tester: {
+    url:     'https://hgjzwbjkuyqlznqiluvp.supabase.co',
+    anonKey: 'sb_publishable_iZDEYc0PSoTHDz2TzRo14w_iH4szE0-',
+  },
+};
+const PROD_HOSTS = ['watania-vision.pages.dev'];  // add custom domain here when live
+const _SB_ENV = PROD_HOSTS.includes(location.hostname) ? 'production' : 'tester';
+const SUPABASE_URL      = SUPABASE_ENVS[_SB_ENV].url;
+const SUPABASE_ANON_KEY = SUPABASE_ENVS[_SB_ENV].anonKey;
 
 const SB = {
   _readHeaders: {
