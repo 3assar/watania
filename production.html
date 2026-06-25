@@ -223,6 +223,7 @@
       <svg class="si" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="17" y2="17"/></svg>
       <input type="text" id="search" placeholder="Search product, machine, WO…" oninput="onSearch()">
     </div>
+    <button class="tb-menu-btn tb-btn" onclick="toggleTopMenu()" aria-label="Menu">⋮</button>
     <div class="tb-right">
       <span id="sync-status" class="tb-btn">… Loading</span>
       <span class="user-badge" id="user-badge">—</span>
@@ -586,9 +587,14 @@ function toggleSidebar() {
   else app.classList.toggle('sb-collapsed');
 }
 function closeNav() { document.getElementById('app').classList.remove('nav-open'); }
-// Picking a filter/section on mobile should close the drawer.
+function toggleTopMenu() { document.getElementById('app').classList.toggle('tb-menu-open'); }
 document.addEventListener('click', e => {
-  if (e.target.closest('.sidebar .sb-item') && window.matchMedia('(max-width:640px)').matches) closeNav();
+  const mobile = window.matchMedia('(max-width:640px)').matches;
+  // Picking a filter on mobile closes the nav drawer.
+  if (mobile && e.target.closest('.sidebar .sb-item')) closeNav();
+  // Any click other than the ⋮ button closes the top action menu.
+  const app = document.getElementById('app');
+  if (app.classList.contains('tb-menu-open') && !e.target.closest('.tb-menu-btn')) app.classList.remove('tb-menu-open');
 });
 
 // ── FILTERS ───────────────────────────────────────────────────────────────────

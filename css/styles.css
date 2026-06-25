@@ -230,8 +230,9 @@ mark{background:#fff3a0;border-radius:2px;padding:0 1px}
    Additive only: the desktop layout above is untouched at ≥641px.
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Off-canvas nav backdrop — only rendered on mobile (see media query). */
+/* Off-canvas nav backdrop + topbar overflow-menu button — mobile only. */
 .nav-backdrop{display:none}
+.tb-menu-btn{display:none}
 
 /* Keyboard focus visibility (all viewports). */
 :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -264,12 +265,26 @@ mark{background:#fff3a0;border-radius:2px;padding:0 1px}
   }
   #app.nav-open .nav-backdrop{opacity:1;pointer-events:auto}
 
-  /* — Topbar: keep one tidy 54px row; declutter for the small screen — */
-  .topbar{padding:0 .55rem;gap:.4rem;z-index:50}
-  .logo{font-size:.8rem}
+  /* — Topbar: one tidy 54px row = ☰ + logo + ⋮ overflow menu — */
+  .topbar{position:relative;padding:0 .5rem;gap:.5rem;z-index:50}
+  .logo{font-size:.82rem;white-space:nowrap}
+  .view-tabs{display:none}     /* relocated in Chunk 2 (production view switch) */
   .search-wrap{display:none}   /* re-enabled per page where search is the core flow */
   #sync-status{display:none}   /* toast already covers save feedback on mobile */
-  .tb-right{gap:.3rem;margin-left:auto}
+  .tb-menu-btn{display:flex;margin-left:auto;font-size:1.15rem;min-height:44px}
+
+  /* The action cluster collapses into a top-right dropdown (same buttons, so
+     permission gating is untouched), revealed by the ⋮ button. */
+  .tb-right{
+    position:absolute;top:calc(100% + 4px);right:.4rem;margin-left:0;
+    flex-direction:column;align-items:stretch;gap:.25rem;
+    min-width:210px;max-width:78vw;padding:.4rem;
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:55;display:none;
+  }
+  #app.tb-menu-open .tb-right{display:flex}
+  .tb-right .tb-btn,.tb-right>a.tb-btn{width:100%;justify-content:flex-start;min-height:44px}
+  .tb-right .user-badge{align-self:flex-start;margin:.15rem .25rem .35rem}
 
   /* — Touch targets: ≥44px with comfortable spacing — */
   .tb-btn{min-height:44px;padding:.4rem .55rem}
@@ -279,6 +294,7 @@ mark{background:#fff3a0;border-radius:2px;padding:0 1px}
 
   /* — Content & forms — */
   .main{padding:.7rem;overscroll-behavior:contain}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}  /* fit 2 cards, no overflow */
   input,select,textarea{font-size:16px}   /* ≥16px stops iOS zoom-on-focus */
   .modal{width:min(480px,94vw);padding:1.3rem}
   .p-body{padding:.9rem}
