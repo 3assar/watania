@@ -39,6 +39,7 @@
       <button class="tb-btn danger" onclick="doLogout()">Sign out</button>
     </div>
   </div>
+  <div class="nav-backdrop" onclick="closeNav()" aria-hidden="true"></div>
   <aside class="sidebar" id="sidebar">
     <div class="sb-sec-title">Filter</div>
     <button class="sb-item active" onclick="setFilter('all',this)"><span class="sb-icon">📋</span>All products<span class="sb-count" id="cnt-all">—</span></button>
@@ -1466,13 +1467,21 @@ function showToast(msg) {
 // ── SIDEBAR ───────────────────────────────────────────────────────────────────
 
 function toggleSidebar() {
-  const app       = document.getElementById('app');
+  const app = document.getElementById('app');
+  // On phones the sidebar is an off-canvas drawer (.nav-open); on desktop it
+  // collapses the grid column (.sb-collapsed) and persists that preference.
+  if (window.matchMedia('(max-width:640px)').matches) { app.classList.toggle('nav-open'); return; }
   const collapsed = app.classList.toggle('sb-collapsed');
   const btn       = document.getElementById('sb-toggle');
   btn.textContent = collapsed ? '▶' : '☰';
   btn.title       = collapsed ? 'Show sidebar' : 'Hide sidebar';
   localStorage.setItem('awp_sb_collapsed', collapsed ? '1' : '0');
 }
+function closeNav() { document.getElementById('app').classList.remove('nav-open'); }
+// Picking a filter/category on mobile should close the drawer.
+document.addEventListener('click', e => {
+  if (e.target.closest('.sidebar .sb-item') && window.matchMedia('(max-width:640px)').matches) closeNav();
+});
 function restoreSidebarState() {
   if (localStorage.getItem('awp_sb_collapsed') === '1') {
     document.getElementById('app').classList.add('sb-collapsed');

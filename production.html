@@ -232,6 +232,8 @@
     </div>
   </div>
 
+  <div class="nav-backdrop" onclick="closeNav()" aria-hidden="true"></div>
+
   <aside class="sidebar" id="sidebar">
     <div class="sb-sec-title">Status</div>
     <button class="sb-item active" onclick="setFilter('all',this)"><span class="sb-icon">📋</span>All active<span class="sb-count" id="cnt-all">—</span></button>
@@ -576,7 +578,18 @@ function switchView(view, el) {
   if (isFloor) { renderShopFloorInteractive(floorSector); startFloorTimer(); }
   else         stopFloorTimer();
 }
-function toggleSidebar() { document.getElementById('app').classList.toggle('sb-collapsed'); }
+function toggleSidebar() {
+  const app = document.getElementById('app');
+  // On phones the sidebar is an off-canvas drawer (.nav-open); on desktop it
+  // collapses the grid column (.sb-collapsed). One button, two behaviours.
+  if (window.matchMedia('(max-width:640px)').matches) app.classList.toggle('nav-open');
+  else app.classList.toggle('sb-collapsed');
+}
+function closeNav() { document.getElementById('app').classList.remove('nav-open'); }
+// Picking a filter/section on mobile should close the drawer.
+document.addEventListener('click', e => {
+  if (e.target.closest('.sidebar .sb-item') && window.matchMedia('(max-width:640px)').matches) closeNav();
+});
 
 // ── FILTERS ───────────────────────────────────────────────────────────────────
 function setFilter(f, el) {
