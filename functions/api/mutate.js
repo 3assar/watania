@@ -81,11 +81,23 @@ function authorize(role, path, method) {
   return null;
 }
 
+// Echo the request Origin only if it's in the allowlist (ALLOWED_ORIGINS env var,
+// comma-separated). Add the custom domain to that env var when it goes live — no
+// code change needed. The app's own calls are same-origin, so CORS never applies
+// to them; this only governs cross-origin callers.
+function allowOrigin(request, env) {
+  const allowed = (env.ALLOWED_ORIGINS || 'https://watania-vision.pages.dev')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const origin = request.headers.get('Origin') || '';
+  return allowed.includes(origin) ? origin : allowed[0];
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
 
   const cors = {
-    'Access-Control-Allow-Origin':  '*',
+    'Access-Control-Allow-Origin':  allowOrigin(request, env),
+    'Vary':                         'Origin',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type':                 'application/json',

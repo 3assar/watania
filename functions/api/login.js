@@ -20,11 +20,23 @@ async function signJWT(payload, secret) {
   return `${header}.${body}.${sigB64}`;
 }
 
+// Echo the request Origin only if it's in the allowlist (ALLOWED_ORIGINS env var,
+// comma-separated). Add the custom domain to that env var when it goes live — no
+// code change needed. NOTE: the app's own calls are same-origin, so CORS never
+// applies to them; this only governs cross-origin callers.
+function allowOrigin(request, env) {
+  const allowed = (env.ALLOWED_ORIGINS || 'https://watania-vision.pages.dev')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const origin = request.headers.get('Origin') || '';
+  return allowed.includes(origin) ? origin : allowed[0];
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
 
   const cors = {
-    'Access-Control-Allow-Origin':  '*',
+    'Access-Control-Allow-Origin':  allowOrigin(request, env),
+    'Vary':                         'Origin',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type':                 'application/json',
@@ -41,6 +53,27 @@ export async function onRequest(context) {
 
   if (!supabaseUrl || !serviceRoleKey || !sessionSecret) {
     return new Response(JSON.stringify({ error: 'Server misconfiguration' }), { status: 500, headers: cors });
+  }
+
+  // Rate limit: cap login attempts per IP per minute. The Free plan has no WAF
+  // rate limiting, so we count in Cloudflare KV (binding: RATE_LIMIT_KV).
+  // Fails OPEN if the binding is missing or KV errors, so login never breaks
+  // during/after setup — it just runs unthrottled until KV is wired up.
+  const RL_LIMIT  = 8;   // attempts allowed
+  const RL_WINDOW = 60;  // per this many seconds (KV minimum TTL is 60)
+  if (env.RATE_LIMIT_KV) {
+    const ip  = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const key = `login:${ip}`;
+    try {
+      const count = parseInt(await env.RATE_LIMIT_KV.get(key)) || 0;
+      if (count >= RL_LIMIT) {
+        return new Response(
+          JSON.stringify({ error: 'Too many login attempts. Please wait a minute and try again.' }),
+          { status: 429, headers: cors }
+        );
+      }
+      await env.RATE_LIMIT_KV.put(key, String(count + 1), { expirationTtl: RL_WINDOW });
+    } catch (_) { /* KV unavailable — do not block a legitimate login */ }
   }
 
   let body;
