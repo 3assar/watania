@@ -23,7 +23,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .login-error{color:var(--red);font-size:.8rem;text-align:center;margin-top:.5rem;min-height:1.2rem}
 
 /* ── APP LAYOUT ── */
-#app{display:none;grid-template-columns:240px 1fr;grid-template-rows:54px 1fr;height:100vh;overflow:hidden;transition:grid-template-columns .2s ease}
+#app{display:none;grid-template-columns:240px 1fr;grid-template-rows:54px 1fr;height:100vh;height:100dvh;overflow:hidden;transition:grid-template-columns .2s ease}
 #app.sb-collapsed{grid-template-columns:0px 1fr}
 #app.sb-collapsed .sidebar{padding:0;border:none;overflow:hidden;min-width:0}
 #app.visible{display:grid}
@@ -159,7 +159,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 /* ── MODALS ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:center;justify-content:center}
 .modal-overlay.open{display:flex}
-.modal{background:var(--surface);border-radius:14px;padding:1.8rem;width:min(480px,90vw);max-height:85vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.2)}
+.modal{background:var(--surface);border-radius:14px;padding:1.8rem;width:min(480px,90vw);max-height:85vh;max-height:85dvh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.2)}
 .modal h3{font-size:1rem;font-weight:700;margin-bottom:1.2rem}
 .modal-footer{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.2rem}
 .btn{padding:.45rem .9rem;border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;border:none}
@@ -173,7 +173,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 /* ── SETTINGS / ADMIN ── */
 .settings-panel{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:80;display:none;align-items:flex-start;justify-content:flex-end}
 .settings-panel.open{display:flex}
-.settings-box{background:var(--surface);width:min(420px,100vw);height:100vh;overflow-y:auto;border-left:1px solid var(--border);padding:1.2rem}
+.settings-box{background:var(--surface);width:min(420px,100vw);height:100vh;height:100dvh;overflow-y:auto;border-left:1px solid var(--border);padding:1.2rem}
 .settings-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem}
 .settings-hdr h3{font-size:.95rem;font-weight:700}
 .user-row{display:flex;align-items:center;gap:.5rem;padding:.5rem 0;border-bottom:1px solid var(--border)}

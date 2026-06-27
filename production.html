@@ -38,7 +38,7 @@
     .sec-c{background:#dcfce7;color:#15803d}
 
     /* WO DETAIL PANEL */
-    .wo-panel{position:fixed;top:0;right:-680px;width:660px;max-width:100vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:200;display:flex;flex-direction:column;transition:right .25s ease;overflow:hidden}
+    .wo-panel{position:fixed;top:0;right:-680px;width:660px;max-width:100vw;height:100vh;height:100dvh;background:var(--surface);border-left:1px solid var(--border);z-index:200;display:flex;flex-direction:column;transition:right .25s ease;overflow:hidden}
     .wo-panel.open{right:0}
     .wp-hdr{display:flex;align-items:center;gap:.45rem;padding:.75rem 1rem;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
     .wp-hdr h2{flex:1;font-size:.92rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -62,7 +62,7 @@
     .ltbl tfoot td{font-weight:700;background:var(--surface2)}
 
     /* WIZARD */
-    .wiz-panel{position:fixed;top:0;right:-720px;width:700px;max-width:100vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:300;display:flex;flex-direction:column;transition:right .25s ease;overflow:hidden}
+    .wiz-panel{position:fixed;top:0;right:-720px;width:700px;max-width:100vw;height:100vh;height:100dvh;background:var(--surface);border-left:1px solid var(--border);z-index:300;display:flex;flex-direction:column;transition:right .25s ease;overflow:hidden}
     .wiz-panel.open{right:0}
     .wiz-hdr{padding:.75rem 1rem;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:.7rem}
     .wiz-hdr h2{flex:1;font-size:.92rem;font-weight:700}
@@ -125,7 +125,7 @@
     /* MODALS — raised above WO panel (z-index 200) and wizard (300) */
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:450;align-items:center;justify-content:center}
     .modal-overlay.open{display:flex}
-    .modal{background:var(--surface);border-radius:12px;padding:1.4rem 1.5rem;width:480px;max-width:calc(100vw - 2rem);box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto}
+    .modal{background:var(--surface);border-radius:12px;padding:1.4rem 1.5rem;width:480px;max-width:calc(100vw - 2rem);box-shadow:0 8px 32px rgba(0,0,0,.18);max-height:90vh;max-height:90dvh;overflow-y:auto}
     .modal h3{margin:0 0 1rem;font-size:.95rem}
     .modal-foot{display:flex;gap:.5rem;margin-top:1.1rem;justify-content:flex-end}
 
