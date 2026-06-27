@@ -992,7 +992,7 @@ function buildWODetailHtml(wo, logs, pauseLogs = []) {
       <div class="wp-kv"><label>Est. runtime</label><div class="v mono">${wo.planned_runtime_hours || '—'} h</div></div>
       <div class="wp-kv"><label>Total bags</label><div class="v mono">${calcTotalBags(colours, wo.weight_per_piece_g)}</div></div>
     </div>
-    ${wo.material_recipe ? `<div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)">Recipe: <span style="color:var(--text);direction:rtl;display:inline-block">${esc(wo.material_recipe)}</span></div>` : ''}
+    ${wo.material_recipe ? `<div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)">Recipe: <span style="color:var(--text)">${esc(wo.material_recipe)}</span></div>` : ''}
   </div>`;
 
   // Colour table
@@ -1618,28 +1618,28 @@ function renderS2() {
         </div>`;
       }
       if (recs.length === 1) {
-        const ratioStr = recs[0].ratios.map(r => (r.qty ? r.qty + '× ' : '') + esc(r.name)).join(' + ');
+        const ratioStr = recs[0].ratios.map(r => esc(r.name) + (r.qty ? ' ×' + r.qty : '')).join(' + ');
         return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:.5rem .7rem;font-size:.8rem">
           <div style="font-weight:600;margin-bottom:.2rem">${esc(recs[0].name)}</div>
-          <div style="color:var(--muted);direction:rtl;text-align:right">${ratioStr}</div>
+          <div style="color:var(--muted)">${ratioStr}</div>
         </div>
         <input type="hidden" id="s2-recipe" value="${ratioStr}">`;
       }
       const cur = wizardData.material_recipe || '';
       return `<div style="display:flex;flex-direction:column;gap:.3rem" id="s2-recipe-picker">
         ${recs.map((rec, ri) => {
-          const ratioStr = rec.ratios.map(r => (r.qty ? r.qty + '× ' : '') + r.name).join(' + ');
+          const ratioStr = rec.ratios.map(r => r.name + (r.qty ? ' ×' + r.qty : '')).join(' + ');
           const checked  = cur === ratioStr || (!cur && ri === 0) ? 'checked' : '';
           return `<label style="display:flex;align-items:flex-start;gap:.55rem;padding:.5rem .7rem;border:1px solid var(--border);border-radius:7px;cursor:pointer;${checked?'border-color:var(--accent);background:rgba(201,76,40,.05)':''}">
             <input type="radio" name="s2-recipe-radio" value="${esc(ratioStr)}" ${checked} onchange="document.getElementById('s2-recipe').value=this.value;document.querySelectorAll('#s2-recipe-picker label').forEach(l=>l.style.borderColor='var(--border)');this.closest('label').style.borderColor='var(--accent)';" style="margin-top:.15rem;flex-shrink:0">
             <div>
               <div style="font-weight:600;font-size:.8rem">${esc(rec.name)}</div>
-              <div style="font-size:.72rem;color:var(--muted);direction:rtl;text-align:right">${esc(ratioStr)}</div>
+              <div style="font-size:.72rem;color:var(--muted)">${esc(ratioStr)}</div>
             </div>
           </label>`;
         }).join('')}
       </div>
-      <input type="hidden" id="s2-recipe" value="${esc(recs[0].ratios.map(r => (r.qty ? r.qty + '× ' : '') + r.name).join(' + '))}">`;
+      <input type="hidden" id="s2-recipe" value="${esc(recs[0].ratios.map(r => r.name + (r.qty ? ' ×' + r.qty : '')).join(' + '))}">`;
     })()}
   </div>
 
@@ -2149,7 +2149,7 @@ async function openPrint() {
     </table>` : ''}
     ${wo.material_recipe ? `
     <div class="sec">الخامات المستخدمة</div>
-    <div style="border:1pt solid #aaa;padding:2mm 3mm;font-size:9pt;min-height:10mm;direction:rtl;text-align:right">${e(wo.material_recipe)}</div>` : ''}
+    <div style="border:1pt solid #aaa;padding:2mm 3mm;font-size:9pt;min-height:10mm">${e(wo.material_recipe)}</div>` : ''}
     <div class="sec">سجل الإنتاج اليومي</div>
     <table class="ltbl">
       <thead><tr>
