@@ -205,6 +205,10 @@
       .view-tab{flex:1;display:flex;align-items:center;justify-content:center;min-height:42px;font-size:.85rem}
       #main-content{padding-top:58px}   /* clear the fixed view-tab bar */
 
+      /* The view tabs outrank the filter drawer, so the drawer opens BELOW them
+         (keeps the Work Orders/Shop Floor context visible while filtering). */
+      .sidebar,.nav-backdrop{top:110px}
+
       /* WO list collapses to one column already; just tighten the padding */
       .wo-grid{padding:.2rem;gap:.6rem}
       .grid-hdr,.floor-hdr{flex-wrap:wrap}
