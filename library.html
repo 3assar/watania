@@ -6,6 +6,22 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <title>Al Watania Plast — Product Library</title>
   <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* ══ MOBILE — Chunk 3: Library (≤640px) ══════════════════════════════
+       Searching products is the primary action here, so bring the search box
+       back as a fixed full-width bar under the header (Chunk 1 hid it globally),
+       and open the filter/category drawer below it so search stays visible. */
+    @media (max-width:640px){
+      .search-wrap{
+        display:block;position:fixed;top:54px;left:0;right:0;z-index:25;
+        max-width:none;padding:.4rem .6rem;
+        background:var(--surface);border-bottom:1px solid var(--border);
+      }
+      .search-wrap input{padding-top:.6rem;padding-bottom:.6rem}
+      .main{padding-top:62px}              /* clear the fixed search bar */
+      .sidebar,.nav-backdrop{top:108px}    /* drawer opens below the search bar */
+    }
+  </style>
 </head>
 <body>
 

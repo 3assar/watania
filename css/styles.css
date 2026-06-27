@@ -299,6 +299,7 @@ mark{background:#fff3a0;border-radius:2px;padding:0 1px}
   input,select,textarea{font-size:16px}   /* ≥16px stops iOS zoom-on-focus */
   .modal{width:min(480px,94vw);padding:1.3rem}
   .p-body{padding:.9rem}
+  .eg3{grid-template-columns:1fr 1fr}   /* edit-form triple grid → 2-up on phone */
 
   /* — Kill horizontal scroll — */
   html,body{overflow-x:hidden}
