@@ -193,7 +193,43 @@
     .mc-queue-name{direction:rtl;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
     .mc-idle-body{display:flex;align-items:center;justify-content:center;min-height:90px;padding:.7rem .9rem}
     @media(max-width:900px){.machine-card{width:calc(50% - .5rem);flex:0 0 calc(50% - .5rem)}}
-    @media(max-width:540px){.machine-card{width:100%;flex:0 0 100%}}
+    @media(max-width:640px){.machine-card{width:100%;flex:0 0 100%}}
+
+    /* ══ MOBILE — Chunk 2: production page (≤640px) ══════════════════════ */
+    @media (max-width:640px){
+      /* View switch: relocate the topbar tabs to a fixed bar under the header */
+      .view-tabs{
+        display:flex;position:fixed;top:54px;left:0;right:0;z-index:25;
+        gap:.4rem;padding:.4rem .6rem;background:var(--surface);border-bottom:1px solid var(--border);
+      }
+      .view-tab{flex:1;display:flex;align-items:center;justify-content:center;min-height:42px;font-size:.85rem}
+      #main-content{padding-top:58px}   /* clear the fixed view-tab bar */
+
+      /* WO list collapses to one column already; just tighten the padding */
+      .wo-grid{padding:.2rem;gap:.6rem}
+      .grid-hdr,.floor-hdr{flex-wrap:wrap}
+
+      /* Shop floor: full-width cards + thumb-sized actions */
+      .floor-wrap{padding:.2rem}
+      .floor-sec-btn{min-height:40px;padding:.4rem .85rem}
+      .mc-actions{gap:.45rem}
+      .mc-actions .btn{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:44px}
+      .frow{grid-template-columns:1fr;gap:.3rem}
+
+      /* WO detail panel: stack the dense key/value grids */
+      .wp-g3{grid-template-columns:1fr 1fr}
+      .wp-body{padding:.8rem}
+
+      /* Wizard + forms: stack columns, give the step tracker its own line */
+      .wiz-hdr{flex-wrap:wrap}
+      .wiz-steps{order:3;width:100%;justify-content:center;padding-top:.3rem}
+      .wiz-body{padding:.8rem}
+      .f-g2{grid-template-columns:1fr}
+      .f-g3,.f-g4{grid-template-columns:1fr 1fr}
+
+      /* Colour rows: keep the dye/qty grid from overflowing the narrow panel */
+      .cr-hdr,.cr-row{grid-template-columns:1fr 70px 58px 50px 26px;gap:.25rem;font-size:.66rem}
+    }
 
   </style>
 </head>
