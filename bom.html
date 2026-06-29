@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <title>Al Watania Plast — BOM</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .bom-tabs{display:flex;gap:.3rem;margin-left:.5rem}
+    .bom-tab{padding:.4rem .7rem;border:1px solid var(--border);background:var(--surface);
+      border-radius:var(--r);font-size:.8rem;cursor:pointer;color:var(--muted)}
+    .bom-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .bom-wrap{max-width:900px;margin:0 auto}
+    .bom-search{width:100%;padding:.6rem .8rem;font-size:16px;border:1px solid var(--border);
+      border-radius:var(--r);background:var(--surface);margin-bottom:.8rem}
+    .bom-hint{font-size:.78rem;color:var(--muted);margin:.2rem 0 .8rem}
+    .prod-row{display:flex;justify-content:space-between;align-items:center;gap:.6rem;
+      padding:.6rem .8rem;border:1px solid var(--border);border-radius:var(--r);
+      background:var(--surface);margin-bottom:.4rem;cursor:pointer}
+    .prod-row:hover{border-color:var(--accent2)}
+    .prod-row .pn{font-weight:600;font-size:.9rem}
+    .prod-row .pa{color:var(--muted);font-size:.82rem;direction:rtl}
+    .prod-row .pc{flex-shrink:0;font-size:.72rem;color:var(--muted);
+      background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:.1rem .5rem}
+    .card{border:1px solid var(--border);border-radius:var(--rl);background:var(--surface);
+      padding:.9rem 1rem;margin-bottom:.8rem}
+    .part-hdr{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;
+      border-bottom:1px solid var(--border);padding-bottom:.5rem;margin-bottom:.6rem}
+    .part-name{font-weight:700;direction:rtl}
+    .part-meta{font-size:.74rem;color:var(--muted)}
+    .recipe{margin:.5rem 0;padding:.5rem .6rem;background:var(--surface2);
+      border:1px solid var(--border);border-radius:var(--r)}
+    .recipe-name{font-size:.78rem;font-weight:600;margin-bottom:.4rem;display:flex;gap:.4rem;align-items:center}
+    .badge{font-size:.64rem;font-weight:700;padding:.06rem .4rem;border-radius:999px;letter-spacing:.03em}
+    .badge.def{background:var(--greenbg);color:var(--green)}
+    .badge.alt{background:var(--bluebg);color:var(--blue)}
+    .badge.off{background:var(--redbg);color:var(--red)}
+    .mat-chips,.col-chips{display:flex;flex-wrap:wrap;gap:.35rem}
+    .mat-chip{font-size:.8rem;padding:.18rem .5rem;border:1px solid var(--border2);
+      border-radius:var(--r);background:var(--surface);direction:rtl}
+    .mat-chip b{color:var(--accent)}
+    .mat-chip .star{color:var(--amber)}
+    .col-chip{font-size:.74rem;padding:.12rem .45rem;border:1px solid var(--border);
+      border-radius:999px;background:var(--surface2);direction:rtl}
+    .sub-lbl{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:.5rem 0 .25rem}
+    .mtable{width:100%;border-collapse:collapse;font-size:.84rem}
+    .mtable th,.mtable td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--border)}
+    .mtable th{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+    .mtable td.ar{direction:rtl;font-weight:600}
+    .empty{color:var(--muted);font-size:.85rem;padding:1rem;text-align:center}
+  </style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Al Watania <span>Plast</span><br><small style="font-size:.65rem;color:var(--muted);font-weight:400;letter-spacing:.05em">Bill of Materials</small></div>
+    <div class="login-field"><label>Username</label><input type="text" id="lu" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="login-field"><label>Password</label><input type="password" id="lp" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div class="app" id="app" style="display:none">
+  <div class="topbar">
+    <div class="logo">Al Watania <span>Plast</span></div>
+    <div class="bom-tabs">
+      <button class="bom-tab active" data-view="parts">Parts BOM</button>
+      <button class="bom-tab" data-view="materials">Materials</button>
+    </div>
+    <div class="tb-right">
+      <span class="user-badge" id="user-badge">—</span>
+      <a href="library.html" class="tb-btn" style="text-decoration:none">📋 Library</a>
+      <a href="production.html" class="tb-btn" style="text-decoration:none">🏭 Production</a>
+      <button class="tb-btn danger" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  <main class="main">
+    <div class="bom-wrap">
+      <div id="view-parts">
+        <div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
+          <input class="bom-search" id="part-search" placeholder="Search part name, group, or mould code…" style="flex:1;min-width:200px;margin-bottom:0">
+          <select class="bom-search" id="group-filter" style="max-width:220px;margin-bottom:0"><option value="">All groups</option></select>
+        </div>
+        <div class="bom-hint" id="part-hint">Loading parts…</div>
+        <div id="part-list"></div>
+        <div id="part-detail"></div>
+      </div>
+      <div id="view-materials" style="display:none">
+        <div class="bom-hint" id="mat-hint">Loading materials…</div>
+        <div id="mat-table"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // Classic auth glue (doLogin/initAuth/doLogout are globals from auth.js).
+  function showApp(){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='';
+    window.__bomReady = true;
+    if (window.bomStart) window.bomStart();
+  }
+  function showLogin(){
+    document.getElementById('login-screen').style.display='';
+    document.getElementById('app').style.display='none';
+  }
+  initAuth(showApp, showLogin);
+</script>
+<script type="module" src="js/views/bom.js"></script>
+</body>
+</html>

@@ -132,3 +132,9 @@ function isSupervisor() { const s = SESSION || getSession(); return !!(s && s.ro
 function isOperator()   { const s = SESSION || getSession(); return !!(s && s.role === 'operator'); }
 function canEdit()      { return isAdmin() || isSupervisor(); }
 function canAct()       { return isAdmin() || isSupervisor() || isOperator(); }
+
+// ── Namespace bridge for ES modules (see js/supabase.js). Additive only. ─────────
+window.AWP = Object.assign(window.AWP || {}, {
+  getToken, getSession, sessionExpired, initAuth, doLogin, doLogout,
+  isAdmin, isSupervisor, isOperator, canEdit, canAct, parseJWTPayload, sha256,
+});

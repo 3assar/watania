@@ -301,3 +301,21 @@ async function dbGetMachinesGrouped() {
   }
   return sectors;
 }
+
+// ── Namespace bridge for ES modules ─────────────────────────────────────────────
+// Existing pages use these as bare globals (unchanged). New ES-module screens can't
+// see classic-script globals, so publish the public API on window.AWP for js/api.js
+// to re-export. Additive only — does not change any existing behavior.
+window.AWP = Object.assign(window.AWP || {}, {
+  SB, SUPABASE_URL, SUPABASE_ANON_KEY,
+  dbGetProducts, dbUpdateProduct, dbInsertProduct, dbDeleteProduct,
+  dbGetMoulds, dbGetOverrides, dbGetOverridesLight, dbGetOverrideImage,
+  dbUpsertOverride, dbDeleteOverride,
+  dbGetUsers, dbCreateUser, dbUpdateUser, dbDeleteUser,
+  dbLogActivity, dbGetActivityLog,
+  dbPauseWorkOrder, dbResumeWorkOrder,
+  dbGetMachines, dbUpdateMachine, dbGetMachinesGrouped,
+  dbGetWorkOrders, dbCreateWorkOrder, dbUpdateWorkOrder, dbDeleteWorkOrder,
+  dbGetShiftLogs, dbCreateShiftLog, dbUpsertShiftLog,
+  dbGetPauseLogs, dbCreatePauseLog, dbResumePauseLog,
+});
