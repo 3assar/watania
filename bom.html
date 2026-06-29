@@ -7,6 +7,9 @@
   <title>Al Watania Plast — BOM</title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
+    /* #app is display:none until .visible (styles.css). This page has no sidebar,
+       so override the 2-col app grid to a single column. */
+    #app.visible{grid-template-columns:1fr}
     .bom-tabs{display:flex;gap:.3rem;margin-left:.5rem}
     .bom-tab{padding:.4rem .7rem;border:1px solid var(--border);background:var(--surface);
       border-radius:var(--r);font-size:.8rem;cursor:pointer;color:var(--muted)}
@@ -65,7 +68,7 @@
 </div>
 
 <!-- ══ APP ══ -->
-<div class="app" id="app" style="display:none">
+<div class="app" id="app">
   <div class="topbar">
     <div class="logo">Al Watania <span>Plast</span></div>
     <div class="bom-tabs">
@@ -104,15 +107,16 @@
   // Classic auth glue (doLogin/initAuth/doLogout are globals from auth.js).
   function showApp(){
     document.getElementById('login-screen').style.display='none';
-    document.getElementById('app').style.display='';
+    const app = document.getElementById('app');
+    app.style.display = '';
+    app.classList.add('visible');   // #app is display:none until .visible (styles.css)
+    try { if (typeof SESSION !== 'undefined' && SESSION)
+      document.getElementById('user-badge').textContent = SESSION.username + ' · ' + SESSION.role; } catch(e){}
     window.__bomReady = true;
     if (window.bomStart) window.bomStart();
   }
-  function showLogin(){
-    document.getElementById('login-screen').style.display='';
-    document.getElementById('app').style.display='none';
-  }
-  initAuth(showApp, showLogin);
+  // login-screen is visible by default via CSS; nothing needed on the not-authed path.
+  initAuth(showApp, () => {});
 </script>
 <script type="module" src="js/views/bom.js"></script>
 </body>
